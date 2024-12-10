@@ -1,0 +1,8 @@
+html {
+  color-scheme: normal !important;
+}
+
+:root, #root, body {
+  /* background-color: grey !important; */
+  background: none !important;
+}

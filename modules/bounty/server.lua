@@ -1,0 +1,428 @@
+BountyRegistry = {}
+BountyInfo = {}
+BountyHunters = {}
+
+function AddBountyToRegistry(bounty, ignoreSync, insertSQL) 
+    if not bounty.target then
+        dprint("Bounty missing target")
+        return
+    end
+    if BountyRegistry[bounty.target] then
+        dprint("Bounty already exists for target: " .. bounty.target)
+        return
+    end
+    BountyRegistry[bounty.target] = {
+        source = GetSourceFromIdentifier(bounty.target),
+        npc = bounty.npc or nil,
+        target = bounty.target,
+        targetname = bounty.targetname,
+        image = bounty.image,
+        issuer = bounty.issuer,
+        reward = bounty.reward,
+        description = bounty.description,
+        datetime = bounty.datetime or os.time(),
+        risk = bounty.risk or (string.find(bounty.target, "npc:") and 1 or 3),
+    }
+    if insertSQL then
+        MySQL.Async.execute("INSERT INTO pickle_bailbounty_bounties (target, targetname, image, issuer, reward, description, datetime) VALUES (@target, @targetname, @image, @issuer, @reward, @description, @datetime)", {
+            ["@target"] = bounty.target,
+            ["@targetname"] = bounty.targetname,
+            ["@image"] = bounty.image,
+            ["@issuer"] = bounty.issuer,
+            ["@reward"] = bounty.reward,
+            ["@description"] = bounty.description,
+            ["@datetime"] = bounty.datetime and os.date("%Y-%m-%d %H:%M:%S", bounty.datetime) or nil,
+        }, function(rowsChanged)
+            dprint("Inserted bounty into SQL: " .. rowsChanged)
+        end)
+    end
+    if ignoreSync then return end
+    TriggerClientEvent("pickle_bailbounty:addBounty", -1, bounty.target, BountyRegistry[bounty.target])
+end
+
+function RemoveBountyFromRegistry(target, ignoreSync, deleteSQL)
+    if not BountyRegistry[target] then
+        dprint("Bounty does not exist for target: " .. target)
+        return
+    end
+    BountyRegistry[target] = nil
+    if deleteSQL then
+        MySQL.Async.execute("DELETE FROM pickle_bailbounty_bounties WHERE target = @target", {
+            ["@target"] = target,
+        }, function(rowsChanged)
+            dprint("Deleted bounty from SQL: " .. rowsChanged)
+        end)
+    end
+    if ignoreSync then return end
+    TriggerClientEvent("pickle_bailbounty:removeBounty", -1, target)
+end
+
+function UpdateBounty(target, bounty)
+    if not BountyRegistry[target] then
+        dprint("Bounty does not exist for target: " .. target)
+        return
+    end
+    BountyRegistry[target] = bounty
+    TriggerClientEvent("pickle_bailbounty:updateBounty", -1, target, bounty)
+end
+
+function GenerateNPCBounty(ignoreSync)
+    local risk = 1
+    local rng = math.random(1, 100)
+    local chances = {
+        Config.NPCBounties.riskLevels[1].riskChance,
+        Config.NPCBounties.riskLevels[2].riskChance,
+        Config.NPCBounties.riskLevels[3].riskChance,
+    }
+    local rng = math.random(1, 100)
+    local cumulativeChance = 0
+    for scenario, chance in pairs(chances) do
+        cumulativeChance = cumulativeChance + chance
+        if rng <= cumulativeChance * 100 then
+            risk = scenario
+            break
+        end
+    end
+    local riskCfg = Config.NPCBounties.riskLevels[risk]
+    local crimes = riskCfg.crimes
+    local crime = crimes[math.random(1, #crimes)]
+    local target = nil
+    local gender = (math.random(1, 2) == 1 and "male" or "female")
+    local genderCfg = Config.NPCBounties.characters[gender]
+    local firstname = genderCfg.firstnames[math.random(1, #genderCfg.firstnames)]
+    local lastname = Config.NPCBounties.characters.lastnames[math.random(1, #Config.NPCBounties.characters.lastnames)]
+    local model = genderCfg.peds[math.random(1, #genderCfg.peds)]
+    repeat
+        target = "npc:" .. math.random(1, 999999)
+    until not BountyRegistry[target]
+    BountyRegistry[target] = {
+        target = target,
+        targetname = firstname .. " " .. lastname,
+        npc = {
+            model = model,
+        },
+        image = "https://cfx-nui-pickle_bailbounty/web/dist/images/"..model..".png",
+        issuer = "system",
+        reward = math.random(Config.NPCBounties.rewardRange[1], Config.NPCBounties.rewardRange[2]) * riskCfg.rewardMultiplier,
+        description = _L("npc_description", firstname .. " " .. lastname, crime, _L("available_bounties_risk_" .. risk)),
+        datetime = os.time(),
+        risk = risk,
+    }
+    if ignoreSync then return end
+    TriggerClientEvent("pickle_bailbounty:addBounty", -1, target, BountyRegistry[target])
+end
+
+function GetPlayerCurrentBounty(source)
+    for k,v in pairs(BountyRegistry) do
+        if v.bountyHunter == source then
+            return k, v
+        end
+    end
+end
+
+function CancelBounty(target, remove)
+    local bounty = BountyRegistry[target]
+    if remove then
+        RemoveBountyFromRegistry(target, false, true)
+        if bounty.npc then
+            GenerateNPCBounty(false)
+        end
+    else
+        bounty.bountyHunter = nil
+        UpdateBounty(target, bounty)
+    end
+    BountyInfo[target] = nil
+    TriggerClientEvent("pickle_bailbounty:setBountyState", -1, target, {
+        type = "removeBountyTarget"
+    })
+end
+
+RegisterNetEvent("pickle_bailbounty:setCurrentBountyNPC", function(netId)
+    local source = source
+    local currentBountyId, currentBounty = GetPlayerCurrentBounty(source)
+    if not currentBounty then return ShowNotification(source, _L("no_current_bounty")) end
+    if BountyInfo[currentBountyId] then return end
+    BountyInfo[currentBountyId] = {
+        netId = netId,
+        currentVehicle = nil,
+        isDetained = false,
+        dragger = nil,
+    }
+    CreateThread(function()
+        while BountyRegistry[currentBountyId] and BountyInfo[currentBountyId] do 
+            local bounty = BountyRegistry[currentBountyId]
+            local bountyInfo = BountyInfo[currentBountyId]
+            local netId = bountyInfo.netId
+            local entity = NetworkGetEntityFromNetworkId(netId)
+            if not DoesEntityExist(entity) then
+                if bounty.bountyHunter then
+                    ShowNotification(bounty.bountyHunter, _L("bounty_escaped", bounty.targetname))
+                end
+                CancelBounty(currentBountyId)
+                break
+            end
+            print(GetEntityHealth(entity))
+            if GetEntityHealth(entity) <= 0 then
+                if bounty.bountyHunter then
+                    ShowNotification(bounty.bountyHunter, _L("bounty_killed", bounty.targetname))
+                end
+                CancelBounty(currentBountyId, true)
+                break
+            end
+            Wait(2000)
+        end
+    end)
+    TriggerClientEvent("pickle_bailbounty:setBountyState", -1, currentBountyId, {
+        type = "registerBountyTarget",
+        netId = netId,
+    })
+end)
+
+RegisterNetEvent("pickle_bailbounty:bountyInteract", function(identifier, interactType, data)
+    local source = source
+    local permissions = GetPlayerPermissions(source)
+    local bounty = BountyRegistry[identifier]
+    local bountyInfo = BountyInfo[identifier]
+    if not bounty or not bountyInfo then return end
+    if not BountyHunters[source] then return ShowNotification(source, _L("no_permission_bounty")) end
+    if interactType == "detain" then
+        if not bountyInfo or bountyInfo.isDetained then 
+            return ShowNotification(source, _L("bounty_already_detained"))
+        end
+        bountyInfo.isDetained = true
+        -- local ped = NetworkGetEntityFromNetworkId(bountyInfo.netId)
+        -- ClearPedTasksImmediately(ped)
+        -- TaskPlayAnim(ped, "mp_arrest_paired", "crook_p2_back_left", 8.0, -8.0, 5500, 33, 0, false, false, false)
+
+        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, identifier, {
+            type = "detainBountyTarget",
+            source = source,
+            coords = data.coords,
+            heading = data.heading,
+        })
+    elseif interactType == "drag" then
+        if not bountyInfo or bountyInfo.dragger then 
+            return ShowNotification(source, _L("bounty_someone_dragging"))
+        end
+        if bountyInfo.currentVehicle then
+            return ShowNotification(source, _L("bounty_need_out_vehicle"))
+        end
+        bountyInfo.dragger = source
+        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, identifier, {
+            type = "dragBountyTarget",
+            source = source,
+        })
+    elseif interactType == "stopDragging" then
+        if not bountyInfo or not bountyInfo.dragger or bountyInfo.dragger ~= source then 
+            return ShowNotification(source, _L("bounty_someone_dragging"))
+        end
+        bountyInfo.dragger = nil
+        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, identifier, {
+            type = "releaseBountyTarget",
+            source = source,
+        })
+    elseif interactType == "completeBountyTarget" then
+        local reward = bounty.reward
+        local bountyHunterCut = 1.0
+        if bounty.bountyHunter ~= source then
+            bountyHunterCut = bountyHunterCut - Config.BountyHunters.backupRewardFactor
+            AddMoney(source, math.floor(reward * Config.BountyHunters.backupRewardFactor))
+            ShowNotification(source, _L("bounty_reward_aid", NumberWithCommas(reward * Config.BountyHunters.backupRewardFactor)))
+            AddMoney(bounty.bountyHunter, math.floor(reward * bountyHunterCut))
+            ShowNotification(bounty.bountyHunter, _L("bounty_reward_deducted", NumberWithCommas(reward * bountyHunterCut), NumberWithCommas(reward * Config.BountyHunters.backupRewardFactor)))
+        else
+            AddMoney(bounty.bountyHunter, math.floor(reward * bountyHunterCut))
+            ShowNotification(bounty.bountyHunter, _L("bounty_reward_self", NumberWithCommas(reward * bountyHunterCut)))
+        end        
+        BountyInfo[identifier] = nil
+        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, identifier, {
+            type = "removeBountyTarget",
+            source = source,
+        })
+        RemoveBountyFromRegistry(identifier, false, true)
+    end
+end)
+
+RegisterNetEvent("pickle_bailbounty:vehicleInteract", function(netId)
+    local source = source
+    local permissions = GetPlayerPermissions(source)
+    if not BountyHunters[source] then return ShowNotification(source, _L("no_permission_bounty")) end
+    local bountyId = nil
+    local closestBounty = { id = nil, distance = nil }
+    local playerCoords = GetEntityCoords(GetPlayerPed(source))
+    for k,v in pairs(BountyInfo) do
+        if v.currentVehicle == netId then
+            bountyId = k
+        end
+        local ped
+        if v.netId then
+            ped = NetworkGetEntityFromNetworkId(v.netId)
+        elseif v.source then
+            ped = GetPlayerPed(v.source)
+        end
+        if DoesEntityExist(ped) then
+            local pedCoords = GetEntityCoords(ped)
+            local distance = #(pedCoords - playerCoords)
+            if closestBounty.id == nil or distance < closestBounty.distance then
+                closestBounty.id = k
+                closestBounty.distance = distance
+            end
+        end
+    end
+    if bountyId then -- Take out of current vehicle.
+        BountyInfo[bountyId].currentVehicle = nil
+        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, bountyId, {
+            type = "removeBountyFromVehicle",
+            source = source,
+            currentVehicle = netId,
+        })
+    elseif closestBounty.id and closestBounty.distance < 5.0 then -- Put in closest vehicle.
+        if BountyInfo[closestBounty.id].dragger then
+            local dragger = BountyInfo[closestBounty.id].dragger
+            TriggerClientEvent("pickle_bailbounty:setBountyState", -1, closestBounty.id, {
+                type = "releaseBountyTarget",
+                source = dragger,
+            })
+            SetTimeout(100, function()
+                TriggerClientEvent("pickle_bailbounty:setBountyState", -1, closestBounty.id, {
+                    type = "putBountyInVehicle",
+                    source = dragger,
+                    currentVehicle = netId,
+                })
+            end)
+            BountyInfo[closestBounty.id].dragger = nil
+        else
+            TriggerClientEvent("pickle_bailbounty:setBountyState", -1, closestBounty.id, {
+                type = "putBountyInVehicle",
+                source = source,
+                currentVehicle = netId,
+            })
+        end
+        BountyInfo[closestBounty.id].currentVehicle = netId
+
+    else
+        print("FAILED TO PUT IN / OUT VEHICLE")
+    end
+end)
+
+RegisterNetEvent("pickle_bailbounty:removeBounty", function(target)
+    local permissions = GetPlayerPermissions(source)
+    if not permissions.bailManage then
+        return ShowNotification(source, _L("no_permission_bailmanage"))
+    end
+    local bounty = BountyRegistry[target]
+    if not bounty then return ShowNotification(source, _L("bounty_not_exist")) end
+    if string.sub(target, 1, 4) == "npc:" then return ShowNotification(source, _L("bounty_remove_is_npc")) end
+    ShowNotification(source, _L("bounty_canceled", bounty.targetname))
+    RemoveBountyFromRegistry(target, false, true)
+end)
+
+RegisterNetEvent("pickle_bailbounty:acceptBounty", function(target)
+    local source = source
+    local target = target
+    if target == nil then -- TODO: REMOVE THIS WHEN DONE
+        for k,v in pairs(BountyRegistry) do
+            target = k
+            break
+        end
+        if target == nil then
+            return ShowNotification(source, _L("bounty_not_exist"))
+        end
+    end
+    local permissions = GetPlayerPermissions(source)
+    if not BountyHunters[source] then
+        return ShowNotification(source, _L("no_permission_bounty"))
+    end
+    local bounty = BountyRegistry[target]
+    if not bounty then return ShowNotification(source, _L("bounty_not_exist")) end
+    if bounty.bountyHunter then return ShowNotification(source, _L("bounty_already_accepted")) end
+    ShowNotification(source, _L("bounty_accepted", bounty.targetname))
+    bounty.bountyHunter = source
+    UpdateBounty(target, bounty)
+    if not bounty.npc then
+        BountyInfo[target] = {
+            source = bounty.source,
+            currentVehicle = nil,
+            isDetained = false,
+            dragger = nil,
+        }
+        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, target, {
+            type = "registerBountyTarget",
+            source = bounty.source,
+        })
+    end
+    TriggerClientEvent("pickle_bailbounty:acceptBounty", source, target)
+end)
+
+RegisterNetEvent("pickle_bailbounty:cancelCurrentBounty", function(fail)
+    local source = source
+    local currentBountyId, currentBounty = GetPlayerCurrentBounty(source)
+    if not currentBounty then return ShowNotification(source, _L("no_current_bounty")) end
+    if not fail then
+        ShowNotification(source, _L("bounty_canceled", currentBounty.targetname))
+    end
+    CancelBounty(currentBountyId)
+end)
+
+RegisterNetEvent("pickle_bailbounty:toggleDuty", function()
+    local source = source
+    local permissions = GetPlayerPermissions(source)
+    if BountyHunters[source] then
+        local currentBountyId, currentBounty = GetPlayerCurrentBounty(source)
+        if currentBounty then
+            CancelBounty(currentBountyId)
+        end
+        BountyHunters[source] = nil
+        ShowNotification(source, _L("bountyhunter_off"))
+    else
+        if not permissions.bountyHunter then return ShowNotification(source, _L("no_permission_bounty")) end
+        BountyHunters[source] = {
+            name = GetPlayerCharacterName(source),
+            clockedIn = os.time(),
+        }
+        ShowNotification(source, _L("bountyhunter_on"))
+    end
+    TriggerClientEvent("pickle_bailbounty:dutyState", source, BountyHunters[source])
+end)
+
+CreateThread(function()
+    if not Config.PlayerBounties.blip.enabled then return end
+    while true do
+        for k,v in pairs(BountyInfo) do 
+            if v.source then
+                local bounty = BountyRegistry[k]
+                if bounty and bounty.bountyHunter then
+                    local ped = GetPlayerPed(v.source)
+                    TriggerClientEvent("pickle_bailbounty:refreshBountyPosition", bounty.bountyHunter, {
+                        id = k
+                        coords = GetEntityCoords(ped),
+                    })
+                end
+            end
+        end
+        Wait((Config.PlayerBounties.blip.refreshTime or 10) * 1000)
+    end
+end)
+
+CreateThread(function()
+    for i=1, Config.NPCBounties.maxNPCBounties do
+        GenerateNPCBounty(true, ignoreSync)
+    end
+end)
+
+AddEventHandler("onPlayerDropped", function()
+    local source = source
+    local identifier = GetPlayerIdentifier(source)
+    local currentBountyId, currentBounty = GetPlayerCurrentBounty(source)
+    if currentBounty then
+        currentBounty.bountyHunter = nil
+        UpdateBounty(currentBountyId, currentBounty)
+    end
+    local bounty = BountyRegistry[identifier]
+    if bounty then
+        bounty.bountyHunter = nil
+        bounty.source = nil
+        UpdateBounty(identifier, bounty)
+    end
+    BountyHunters[source] = nil
+end)
