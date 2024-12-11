@@ -42,7 +42,7 @@ lua54 'yes'
 
 escrow_ignore {
 	"config.lua",
-	"_INSTALL/**/*.*",
+	"__INSTALL/**/*.*",
 	"bridge/**/**/*.*",
 	"bridge/**/*.*",
     "locales/locale.lua",
