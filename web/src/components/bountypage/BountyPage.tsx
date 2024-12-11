@@ -31,6 +31,7 @@ export type Player = {
     name: string;
     image?: string;
     reward?: number;
+    sentence?: number;
 }
 
 export function Risk(risk: number, translate: any) {
@@ -49,88 +50,7 @@ function BountyPage() {
     const {bountyApp, setBountyApp} = useBountyApp();
     const [bounties, setBounties] = useState<Bounty[]>(bountyApp.bounties);
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-    const [players, setPlayers] = useState<Player[]>([
-        {
-            source: 1,
-            identifier: "steam:123456",
-            name: "John Doe"
-        },
-        {
-            source: 2,
-            identifier: "steam:654321",
-            name: "Jane Smith"
-        },
-        {
-            source: 3,
-            identifier: "steam:112233",
-            name: "Alice Johnson"
-        },
-        {
-            source: 4,
-            identifier: "steam:445566",
-            name: "Bob Brown"
-        },
-        {
-            source: 5,
-            identifier: "steam:778899",
-            name: "Charlie Davis"
-        },
-        {
-            source: 6,
-            identifier: "steam:998877",
-            name: "David Wilson"
-        },
-        {
-            source: 7,
-            identifier: "steam:223344",
-            name: "Eve White"
-        },
-        {
-            source: 8,
-            identifier: "steam:556677",
-            name: "Frank Green"
-        },
-        {
-            source: 9,
-            identifier: "steam:889900",
-            name: "Grace Black"
-        },
-        {
-            source: 10,
-            identifier: "steam:334455",
-            name: "Hank Blue"
-        },
-        {
-            source: 11,
-            identifier: "steam:667788",
-            name: "Ivy Red"
-        },
-        {
-            source: 12,
-            identifier: "steam:990011",
-            name: "Jack Yellow"
-        },
-        {
-            source: 13,
-            identifier: "steam:112244",
-            name: "Karen Purple"
-        },
-        {
-            source: 14,
-            identifier: "steam:334466",
-            name: "Leo Orange"
-        },
-        {
-            source: 15,
-            identifier: "steam:556688",
-            name: "Mia Pink"
-        },
-        {
-            source: 16,
-            identifier: "steam:778800",
-            name: "Nina Gray"
-        }
-    ]);
+    const [players, setPlayers] = useState<Player[]>([]);
     const [search, setSearch] = useState("");
     const [addingPlayer, setAddingPlayer] = useState(false);
     const [viewBounty, setViewBounty] = useState<Bounty | null>(null);
@@ -196,7 +116,7 @@ function BountyPage() {
             }} visible={addingPlayer}>
                 {selectedPlayer ? (
                     <Flex gap={10} pl={10} pr={10} direction={"column"}>
-                        <Group gap={5} w={"100%"} p={10} bg={"dark.6"}>
+                        <Group gap={5} w={"100%"} p={10} bg={"dark.5"}>
                             <Flex>{selectedPlayer.name}</Flex>
                             <Flex>{translate("player_source", selectedPlayer.source)}</Flex>
                         </Group>
@@ -216,6 +136,16 @@ function BountyPage() {
                                 setSelectedPlayer({
                                     ...selectedPlayer,
                                     reward: parseFloat(e.target.value)
+                                });
+                            }} />
+                        </Flex>
+                        <Flex gap={5} direction={"column"}>
+                            <label>{translate("bounty_sentence")}</label>
+                            
+                            <input min={0} max={config.bailOfficers.maximumBailAmount || 0} style={inputStyle} type="number" onChange={(e) => {
+                                setSelectedPlayer({
+                                    ...selectedPlayer,
+                                    sentence: parseFloat(e.target.value) || 0
                                 });
                             }} />
                         </Flex>

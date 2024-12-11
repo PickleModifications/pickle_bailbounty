@@ -169,6 +169,7 @@ function VehicleInteract()
     local vehicle = GetClosestVehicle()
     local netId = VehToNet(vehicle)
     if not netId then return false end
+    if not IsVehicleSeatFree(vehicle, 2) and not GetPedInVehicleSeat(vehicle, 2) then ShowNotification("no_back_seat") return false end
     TriggerServerEvent("pickle_bailbounty:vehicleInteract", netId)
     return true
 end
@@ -182,6 +183,10 @@ function BountyInteract(identifier, interactType)
             coords = GetOffsetFromEntityInWorldCoords(entity, 0.0, 0.8, -1.5),
             heading = GetEntityHeading(entity),
         }
+    end
+    if interactType == "custody" then
+        TriggerServerEvent("pickle_bailbounty:takeCustody", identifier)
+        return
     end
     TriggerServerEvent("pickle_bailbounty:bountyInteract", identifier, interactType, data)
 end
@@ -200,6 +205,10 @@ function ShowBountyTargetOptions(identifier)
         options[#options + 1] = { name = "drag", label = _L("bounty_interact_drag"), onSelect = function() BountyInteract(identifier, "drag") end }
         enabledOptions.drag = true
     end
+    if bountyInfo.source and (LOCAL_PERMISSIONS.bailManage or LOCAL_PERMISSIONS.bailPlacement) then
+        options[#options + 1] = { name = "custody", label = _L("bounty_interact_custody"), onSelect = function() BountyInteract(identifier, "custody") end }
+        enabledOptions.custody = true
+    end
     if bountyInfo.netId then
         AddTargetNetworkId(bountyInfo.netId, options)
     end
@@ -214,8 +223,7 @@ function RemoveBountyTargetOptions(identifier)
         { name = "detain", label = _L("bounty_interact_detain") },
         { name = "drag", label = _L("bounty_interact_drag") },
         { name = "vehicle", label = _L("bounty_interact_vehicle") },
-        { name = "release", label = _L("bounty_interact_release") },
-        { name = "release_police", label = _L("bounty_interact_release_police") },
+        { name = "custody", label = _L("bounty_interact_custody") },
     }
     if bountyInfo.netId then
         RemoveTargetNetworkId(bountyInfo.netId, options)
@@ -240,6 +248,9 @@ function ShowBountyTargetMenu(identifier)
             lib.hideContext()
         end}
     end
+    if bountyInfo.source and (LOCAL_PERMISSIONS.bailManage or LOCAL_PERMISSIONS.bailPlacement) then
+        options[#options + 1] = { name = "custody", title = _L("bounty_interact_custody"), onSelect = function() HIDE_INTERACTIONS = false; BountyInteract(identifier, "custody") end }
+    end
     local menuId = "bounty_target_menu"
     lib.registerContext({
         id = menuId,
@@ -260,11 +271,8 @@ function CancelCurrentBounty()
     if CurrentBounty.targetRadius then
         RemoveBlip(CurrentBounty.targetRadius)
     end
-    if CurrentBounty.targetNPC then
-        local targetNPC = CurrentBounty.targetNPC
-        SetTimeout(5000, function()
-            DeleteEntity(targetNPC)
-        end)
+    if CurrentBounty.targetNPC then 
+        -- Handled sv-side
     end
     if CurrentBounty.vehicle then
         local targetVeh = CurrentBounty.vehicle
@@ -342,6 +350,9 @@ RegisterNetEvent("pickle_bailbounty:setBountyState", function(identifier, data)
         }
         if LOCAL_ON_DUTY then
             ShowBountyTargetOptions(identifier)
+        end
+        if LOCAL_PERMISSIONS.bailManage or LOCAL_PERMISSIONS.bailPlacement then
+            ShowBountyTargetOptions(identifier, true)
         end
     elseif data.type == "removeBountyTarget" then
         if BountyInfo[identifier] then
@@ -754,7 +765,9 @@ RegisterNetEvent("pickle_bailbounty:dutyState", function(state)
     if LOCAL_ON_DUTY == state then return end
     LOCAL_ON_DUTY = state
     RenderDutyLocations()
+    UpdatePermissions(LOCAL_PERMISSIONS)
     if not LOCAL_ON_DUTY then 
+        ToggleOutfit(false)
         for k,v in pairs(BountyInfo) do 
             RemoveBountyTargetOptions(k)
         end
@@ -763,6 +776,7 @@ RegisterNetEvent("pickle_bailbounty:dutyState", function(state)
         end
         return
     else
+        ToggleOutfit(true)
         for k,v in pairs(BountyInfo) do 
             ShowBountyTargetOptions(k)
         end
@@ -813,12 +827,52 @@ end)
 RegisterNetEvent("pickle_bailbounty:refreshBountyPosition", function(data)
     local coords = data.coords
     if CurrentBounty and CurrentBounty.id == data.id then
-        -- Do blip things!
+        if BountyInfo[data.id] and BountyInfo[data.id].isDetained then
+            if CurrentBounty.targetBlip or CurrentBounty.targetRadius then
+                RemoveBlip(CurrentBounty.targetBlip)
+                RemoveBlip(CurrentBounty.targetRadius)
+                CurrentBounty.targetBlip = nil
+                CurrentBounty.targetRadius = nil
+            end
+        else
+            local blipCfg = Config.PlayerBounties.blip
+            local rngOffset = {1, 100}
+            local rngScale = (math.random(rngOffset[1], rngOffset[2]) / rngOffset[2]) * (blipCfg.radius.size / 2)
+            local rngCoords = coords + vector3(
+                (math.random(1, 2) == 1 and 1 or -1) * rngScale,
+                (math.random(1, 2) == 1 and 1 or -1) * rngScale,
+                0
+            )
+            if CurrentBounty.targetBlip and CurrentBounty.targetRadius then
+                SetBlipCoords(CurrentBounty.targetBlip, rngCoords)
+                SetBlipCoords(CurrentBounty.targetRadius, rngCoords)
+            else
+                RemoveBlip(CurrentBounty.targetBlip)
+                RemoveBlip(CurrentBounty.targetRadius)
+                local targetBlip, targetRadius = CreateBlip({
+                    coords = rngCoords,
+                    label = blipCfg.labelPrefix .." ".. CurrentBounty.name,
+                    category = 1,
+                    sprite = blipCfg.sprite,
+                    color = blipCfg.color,
+                    scale = blipCfg.scale,
+                    radius = blipCfg.radius,
+                })
+                CurrentBounty.targetBlip = targetBlip
+                CurrentBounty.targetRadius = targetRadius
+            end
+        end
     end
 end)
 
 RegisterNUICallback("addPlayerToBounty", function(data, cb)
-    TriggerServerEvent("pickle_bailbounty:addPlayerToBounty", data.player.identifier, data.player.image, data.player.reward)
+    TriggerServerEvent("pickle_bailbounty:addPlayerToBounty", {
+        source = data.player.source,
+        identifier = data.player.identifier, 
+        image = data.player.image, 
+        reward = data.player.reward, 
+        sentence = data.player.sentence,
+    })
     cb(true)
 end)
 
@@ -849,7 +903,7 @@ CreateThread(function()
     if Config.UseTarget then return end
     while true do 
         local wait = 1000
-        if LOCAL_ON_DUTY then
+        if LOCAL_ON_DUTY or (LOCAL_PERMISSIONS.bailManage or LOCAL_PERMISSIONS.bailPlacement) then
             local closestBounty = {}
             local playerPed = PlayerPedId()
             local playerCoords = GetEntityCoords(playerPed)
@@ -915,6 +969,7 @@ CreateThread(function()
         AddTargetGlobalPlayer({
             { name = "detain", label = _L("bounty_interact_detain"), interactCheck = function(...) return canInteract("detain", ...) end, onSelected = function(...) onSelect("detain", ...) end },
             { name = "drag", label = _L("bounty_interact_drag"), interactCheck = function(...) return canInteract("drag", ...) end, onSelected = function(...) onSelect("drag", ...) end },
+            { name = "custody", label = _L("bounty_interact_custody"), interactCheck = function(...) return canInteract("custody", ...) end, onSelected = function(...) onSelect("custody", ...) end }        
         })
     end
     local modifiers = {
@@ -942,7 +997,4 @@ CreateThread(function()
         if v.blip then addBlip(v.coords) end
     end
     RenderDutyLocations()
-    for k,v in pairs(Config.BountyHunters.vehicleLocations) do 
-        if v.blip then addBlip(v.coords) end
-    end
 end)

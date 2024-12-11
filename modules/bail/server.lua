@@ -23,6 +23,7 @@ function AddBailToRegistry(bail, ignoreSync, insertSQL)
         nextcompliance = bail.nextcompliance,
         lastcompliance = bail.lastcompliance,
         status = bail.status or "compliant",
+        sentence = bail.sentence or 0,
     }
     if insertSQL then
         MySQL.Async.execute("INSERT INTO pickle_bailbounty_bail (identifier, name, image, issuer, reward, description, status, startdate, completiondate, nextcompliance, lastcompliance) VALUES (@identifier, @name, @image, @issuer, @reward, @description, @status, @startdate, @completiondate, @nextcompliance, @lastcompliance)", {
@@ -37,6 +38,7 @@ function AddBailToRegistry(bail, ignoreSync, insertSQL)
             ["@completiondate"] = bail.completiondate and os.date("%Y-%m-%d %H:%M:%S", bail.completiondate) or nil,
             ["@nextcompliance"] = bail.nextcompliance and os.date("%Y-%m-%d %H:%M:%S", bail.nextcompliance) or nil,
             ["@lastcompliance"] = bail.lastcompliance and os.date("%Y-%m-%d %H:%M:%S", bail.lastcompliance) or nil,
+            ["@sentence"] = bail.sentence or 0,
         }, function(rowsChanged)
             dprint("Inserted bail into SQL: " .. rowsChanged)
         end)
@@ -123,6 +125,7 @@ RegisterNetEvent("pickle_bailbounty:placeBail", function(data)
         nextcompliance = (os.time() + 86400),
         lastcompliance = os.time(),
         status = "compliant",
+        sentence = data.sentence,
     }
     AddBailToRegistry(bail, false, true)
     ShowNotification(source, "Bail placed on " .. bail.name .. " for " .. NumberWithCommas(data.penalty))
@@ -172,6 +175,7 @@ RegisterNetEvent("pickle_bailbounty:revokeBail", function(target, selfRemove)
         description = bail.description,
         datetime = os.time(),
         risk = 3,
+        sentence = bail.sentence,
     }, false, true)
     if not selfRemove then
         ShowNotification(source, _L("bail_revoked", bail.name))
@@ -222,7 +226,6 @@ CreateThread(function()
                 local nextcompliance = bail.nextcompliance
                 local timeLeft = nextcompliance - currentTime
                 if currentTime > nextcompliance then
-                    print("BA", currentTime, nextcompliance)
                     RemoveBailFromRegistry(k)
                     AddBountyToRegistry({
                         target = bail.identifier,
@@ -234,6 +237,7 @@ CreateThread(function()
                         description = bail.description,
                         datetime = os.time(),
                         risk = 3,
+                        sentence = bail.sentence,
                     }, false, true)
                 else
                     local notifyTime = Config.Bail.notifyTime * 3600

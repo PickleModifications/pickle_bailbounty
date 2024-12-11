@@ -32,11 +32,11 @@ RegisterNUICallback("requestConfig", function(data, cb)
     -- SetAppDisplay(true)
     SetTimeout(100, function()
         TriggerServerEvent("pickle_bailbounty:initializePlayer")
-        SetTimeout(2000, function()
-            if GetPlayerServerId(PlayerId()) == 6 then
-                TriggerServerEvent("pickle_bailbounty:acceptBounty", "char1:7817bde6206cb72577821aa3369e8d15f688138a")
-            end
-        end)
+        -- SetTimeout(2000, function()
+        --     if GetPlayerServerId(PlayerId()) == 6 then
+        --         TriggerServerEvent("pickle_bailbounty:acceptBounty", "char1:7817bde6206cb72577821aa3369e8d15f688138a")
+        --     end
+        -- end)
         -- OpenBailRegistrationMenuQuery()
     end)
 end)

@@ -98,7 +98,8 @@ MySQL.ready(function()
         issuer VARCHAR(255) NOT NULL,
         reward INT NOT NULL,
         description TEXT NOT NULL,
-        datetime DATETIME DEFAULT CURRENT_TIMESTAMP
+        datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+        sentence INT DEFAULT 0
     )]], {})
     MySQL.Sync.execute([[CREATE TABLE IF NOT EXISTS pickle_bailbounty_bail (
         identifier VARCHAR(255) PRIMARY KEY NOT NULL,
@@ -111,7 +112,8 @@ MySQL.ready(function()
         startdate DATETIME DEFAULT CURRENT_TIMESTAMP,
         completiondate DATETIME NOT NULL,
         nextcompliance DATETIME DEFAULT NULL,
-        lastcompliance DATETIME DEFAULT NULL
+        lastcompliance DATETIME DEFAULT NULL,
+        sentence INT DEFAULT 0
     )]], {})
     MySQL.Async.fetchAll("SELECT * FROM pickle_bailbounty_bounties", {}, function(bounties)
         for _, bounty in ipairs(bounties) do
@@ -123,6 +125,7 @@ MySQL.ready(function()
                 reward = bounty.reward,
                 description = bounty.description,
                 datetime = bounty.datetime and math.floor(bounty.datetime / 1000) or nil,
+                sentence = bounty.sentence,
             }, true)
         end
     end)
@@ -140,6 +143,7 @@ MySQL.ready(function()
                 completiondate = bail.completiondate and math.floor(bail.completiondate / 1000) or nil,
                 nextcompliance = bail.nextcompliance and math.floor(bail.nextcompliance / 1000) or nil,
                 lastcompliance = bail.lastcompliance and math.floor(bail.lastcompliance / 1000) or nil,
+                sentence = bail.sentence
             }, true)
         end
     end)

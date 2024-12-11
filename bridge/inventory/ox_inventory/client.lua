@@ -12,7 +12,7 @@ RegisterNetEvent("pickle_bailbounty:setupInventory", function(data)
 end)
 
 RegisterNetEvent("pickle_bailbounty:updateInventory", function(inventory) 
-    RefreshInventory(inventory)
+    -- RefreshInventory(inventory)
 end)
 
 function InitializeInventory()

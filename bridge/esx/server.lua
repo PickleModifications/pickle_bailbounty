@@ -27,6 +27,7 @@ end
 
 function GetPlayerCharacterName(source)
     local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then return "Unknown Name" end
     return xPlayer.getName()
 end
 
@@ -41,6 +42,7 @@ end
 
 function CheckPermission(source, permission)
     local xPlayer = ESX.GetPlayerFromId(source)
+    if not xPlayer then return end
     local name = xPlayer.job.name
     local rank = xPlayer.job.grade
     local group = xPlayer.getGroup()

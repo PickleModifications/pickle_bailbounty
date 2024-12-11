@@ -22,6 +22,7 @@ function AddBountyToRegistry(bounty, ignoreSync, insertSQL)
         description = bounty.description,
         datetime = bounty.datetime or os.time(),
         risk = bounty.risk or (string.find(bounty.target, "npc:") and 1 or 3),
+        sentence = bounty.sentence or 0,
     }
     if insertSQL then
         MySQL.Async.execute("INSERT INTO pickle_bailbounty_bounties (target, targetname, image, issuer, reward, description, datetime) VALUES (@target, @targetname, @image, @issuer, @reward, @description, @datetime)", {
@@ -32,6 +33,7 @@ function AddBountyToRegistry(bounty, ignoreSync, insertSQL)
             ["@reward"] = bounty.reward,
             ["@description"] = bounty.description,
             ["@datetime"] = bounty.datetime and os.date("%Y-%m-%d %H:%M:%S", bounty.datetime) or nil,
+            ["@sentence"] = bounty.sentence or 0,
         }, function(rowsChanged)
             dprint("Inserted bounty into SQL: " .. rowsChanged)
         end)
@@ -40,12 +42,19 @@ function AddBountyToRegistry(bounty, ignoreSync, insertSQL)
     TriggerClientEvent("pickle_bailbounty:addBounty", -1, bounty.target, BountyRegistry[bounty.target])
 end
 
-function RemoveBountyFromRegistry(target, ignoreSync, deleteSQL)
+function RemoveBountyFromRegistry(target, ignoreSync, deleteSQL, source)
     if not BountyRegistry[target] then
         dprint("Bounty does not exist for target: " .. target)
         return
     end
     BountyRegistry[target] = nil
+    BountyInfo[target] = nil
+    if source then
+        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, target, {
+            type = "removeBountyTarget",
+            source = source,
+        })
+    end
     if deleteSQL then
         MySQL.Async.execute("DELETE FROM pickle_bailbounty_bounties WHERE target = @target", {
             ["@target"] = target,
@@ -137,6 +146,35 @@ function CancelBounty(target, remove)
     })
 end
 
+function CompleteBounty(identifier, source, jailPlayer, policeSource)
+    local bounty = BountyRegistry[identifier]
+    local bountyInfo = BountyInfo[identifier]  
+    if not bounty or not bountyInfo then return end
+    local reward = bounty.reward
+    local bountyHunterCut = 1.0 * (policeSource and Config.BailOfficers.custodyRewardFactor or 1.0)
+    if policeSource then
+        AddMoney(source, Config.BailOfficers.custodyRewardOfficer)
+        ShowNotification(source, _L("bounty_custody_reward", NumberWithCommas(Config.BailOfficers.custodyRewardOfficer)))
+        AddMoney(bounty.bountyHunter, math.floor(reward * bountyHunterCut))
+        ShowNotification(bounty.bountyHunter, _L("bounty_reward_self", NumberWithCommas(reward * bountyHunterCut)))
+    else
+        if bounty.bountyHunter ~= source then
+            bountyHunterCut = bountyHunterCut - Config.BountyHunters.backupRewardFactor
+            AddMoney(source, math.floor(reward * Config.BountyHunters.backupRewardFactor))
+            ShowNotification(source, _L("bounty_reward_aid", NumberWithCommas(reward * Config.BountyHunters.backupRewardFactor)))
+            AddMoney(bounty.bountyHunter, math.floor(reward * bountyHunterCut))
+            ShowNotification(bounty.bountyHunter, _L("bounty_reward_deducted", NumberWithCommas(reward * bountyHunterCut), NumberWithCommas(reward * Config.BountyHunters.backupRewardFactor)))
+        else
+            AddMoney(bounty.bountyHunter, math.floor(reward * bountyHunterCut))
+            ShowNotification(bounty.bountyHunter, _L("bounty_reward_self", NumberWithCommas(reward * bountyHunterCut)))
+        end        
+    end
+    if jailPlayer and bounty.source and bounty.sentence and bounty.sentence > 0 then
+        Config.JailEvent(bounty.source, bounty.sentence or 0)
+    end
+    RemoveBountyFromRegistry(identifier, false, true, source)
+end
+
 RegisterNetEvent("pickle_bailbounty:setCurrentBountyNPC", function(netId)
     local source = source
     local currentBountyId, currentBounty = GetPlayerCurrentBounty(source)
@@ -161,7 +199,6 @@ RegisterNetEvent("pickle_bailbounty:setCurrentBountyNPC", function(netId)
                 CancelBounty(currentBountyId)
                 break
             end
-            print(GetEntityHealth(entity))
             if GetEntityHealth(entity) <= 0 then
                 if bounty.bountyHunter then
                     ShowNotification(bounty.bountyHunter, _L("bounty_killed", bounty.targetname))
@@ -170,6 +207,12 @@ RegisterNetEvent("pickle_bailbounty:setCurrentBountyNPC", function(netId)
                 break
             end
             Wait(2000)
+        end
+        local entity = NetworkGetEntityFromNetworkId(netId)
+        if DoesEntityExist(entity) then
+            SetTimeout(5000, function()
+                DeleteEntity(entity)
+            end)
         end
     end)
     TriggerClientEvent("pickle_bailbounty:setBountyState", -1, currentBountyId, {
@@ -222,24 +265,7 @@ RegisterNetEvent("pickle_bailbounty:bountyInteract", function(identifier, intera
             source = source,
         })
     elseif interactType == "completeBountyTarget" then
-        local reward = bounty.reward
-        local bountyHunterCut = 1.0
-        if bounty.bountyHunter ~= source then
-            bountyHunterCut = bountyHunterCut - Config.BountyHunters.backupRewardFactor
-            AddMoney(source, math.floor(reward * Config.BountyHunters.backupRewardFactor))
-            ShowNotification(source, _L("bounty_reward_aid", NumberWithCommas(reward * Config.BountyHunters.backupRewardFactor)))
-            AddMoney(bounty.bountyHunter, math.floor(reward * bountyHunterCut))
-            ShowNotification(bounty.bountyHunter, _L("bounty_reward_deducted", NumberWithCommas(reward * bountyHunterCut), NumberWithCommas(reward * Config.BountyHunters.backupRewardFactor)))
-        else
-            AddMoney(bounty.bountyHunter, math.floor(reward * bountyHunterCut))
-            ShowNotification(bounty.bountyHunter, _L("bounty_reward_self", NumberWithCommas(reward * bountyHunterCut)))
-        end        
-        BountyInfo[identifier] = nil
-        TriggerClientEvent("pickle_bailbounty:setBountyState", -1, identifier, {
-            type = "removeBountyTarget",
-            source = source,
-        })
-        RemoveBountyFromRegistry(identifier, false, true)
+        CompleteBounty(identifier, source, true)
     end
 end)
 
@@ -364,6 +390,45 @@ RegisterNetEvent("pickle_bailbounty:cancelCurrentBounty", function(fail)
     CancelBounty(currentBountyId)
 end)
 
+RegisterNetEvent("pickle_bailbounty:addPlayerToBounty", function(data)
+    local source = source
+    local permissions = GetPlayerPermissions(source)
+    if not permissions.bailPlacement then
+        return ShowNotification(source, _L("no_permission_bailplace"))
+    end
+    local target = GetIdentifier(data.source)
+    if not target or BountyRegistry[target] then return end
+    local bounty = {
+        target = target,
+        targetname = GetPlayerCharacterName(data.source),
+        image = data.image,
+        issuer = GetIdentifier(source),
+        reward = data.reward or 0,
+        description = _L("bounty_wanted"),
+        datetime = os.time(),
+        risk = 3,
+        sentence = data.sentence or 0,
+    }
+    AddBountyToRegistry(bounty, false, true)
+    ShowNotification(source, _L("bail_place_title"))
+end)
+
+RegisterNetEvent("pickle_bailbounty:takeCustody", function(identifier) 
+    local source = source
+    local permissions = GetPlayerPermissions(source)
+    if not permissions.bailManage and not permission.bailPlacement then
+        return ShowNotification(source, _L("no_permission_bailmanage"))
+    end
+    local bounty = BountyRegistry[identifier]
+    local bountyInfo = BountyInfo[identifier]
+    if not bounty or not bountyInfo then return ShowNotification(source, _L("bounty_not_exist")) end
+    if not bounty.bountyHunter then return ShowNotification(source, _L("bounty_not_accepted")) end
+    if bounty.npc then return ShowNotification(source, _L("bounty_npc")) end
+    if not bountyInfo.isDetained then return ShowNotification(source, _L("bounty_needs_detained")) end
+    ShowNotification(source, _L("bounty_released"))
+    CompleteBounty(identifier, source, false, true)
+end)
+
 RegisterNetEvent("pickle_bailbounty:toggleDuty", function()
     local source = source
     local permissions = GetPlayerPermissions(source)
@@ -374,6 +439,9 @@ RegisterNetEvent("pickle_bailbounty:toggleDuty", function()
         end
         BountyHunters[source] = nil
         ShowNotification(source, _L("bountyhunter_off"))
+        for i=1, #Config.BountyHunters.loadout do
+            Inventory.RemoveItem(source, Config.BountyHunters.loadout[i].name, Config.BountyHunters.loadout[i].count or 1)
+        end
     else
         if not permissions.bountyHunter then return ShowNotification(source, _L("no_permission_bounty")) end
         BountyHunters[source] = {
@@ -381,6 +449,9 @@ RegisterNetEvent("pickle_bailbounty:toggleDuty", function()
             clockedIn = os.time(),
         }
         ShowNotification(source, _L("bountyhunter_on"))
+        for i=1, #Config.BountyHunters.loadout do
+            Inventory.AddItem(source, Config.BountyHunters.loadout[i].name, Config.BountyHunters.loadout[i].count or 1)
+        end
     end
     TriggerClientEvent("pickle_bailbounty:dutyState", source, BountyHunters[source])
 end)
@@ -394,7 +465,7 @@ CreateThread(function()
                 if bounty and bounty.bountyHunter then
                     local ped = GetPlayerPed(v.source)
                     TriggerClientEvent("pickle_bailbounty:refreshBountyPosition", bounty.bountyHunter, {
-                        id = k
+                        id = k,
                         coords = GetEntityCoords(ped),
                     })
                 end

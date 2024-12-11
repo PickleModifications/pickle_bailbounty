@@ -48,7 +48,9 @@ function AddTargetGlobalVehicle(options)
 end
 
 function RemoveTargetGlobalVehicle(options)
-    exports.ox_target:removeGlobalVehicle(GetOptionNames(options))
+    for i=1, #options do 
+        exports.ox_target:removeGlobalVehicle(options[i].name)
+    end
 end
 
 local TargetPlayers = {}

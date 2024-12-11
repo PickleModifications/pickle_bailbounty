@@ -23,14 +23,24 @@ Config.TazerPermissions = { -- If you want your tazers to keep working, please a
     },
 }
 
+Config.JailEvent = function(source, time) -- This is the server-side event that is triggered when a player is jailed.
+    -- source: The player's server ID.
+    -- time: The time the player is jailed for.
+    if GetResourceState("rcore_prison") == "started" then 
+        exports['rcore_prison']:Jail(source, time, "Parole Violation")
+    elseif GetResourceState("pickle_prisons") == "started" then 
+        exports.pickle_prisons:JailPlayer(source, time, "default")
+    end
+end
+
 Config.NPCBounties = {
     enabled = true,
     generateCooldown = 30, -- Cooldown in seconds for generating a new NPC bounty (this is skipped during server start).
     maxNPCBounties = 10, -- Maximum amount of NPC bounties that can be available at once.
     rewardRange = {1000, 5000}, -- Minimum and maximum reward for NPC bounties.
     maxDistance = 200.0, -- Maximum distance from the player a spawned NPC bounty can be before it fails the mission.
-    maxDrivingTime = 99999, -- Maximum time in seconds the NPC bounty can be driving before it stops the car to get out and run / shoot.
-    maxStopTime = 10, -- Maximum time in seconds the NPC bounty can be stopped before it gets out and runs / shoots.
+    maxDrivingTime = 180, -- Maximum time in seconds the NPC bounty can be driving before it stops the car to get out and run / shoot.
+    maxStopTime = 10, -- Time in seconds the NPC bounty can be stopped for before it gets out and runs / shoots.
     blip = {
         labelPrefix = "Bounty:", -- Prefix for the blip label. Bounty: NAME_HERE
         sprite = 378,
@@ -40,10 +50,14 @@ Config.NPCBounties = {
         radius = { color = 1, alpha = 127, size = 100.0}
     },
     locations = {
-        { coords = vector3(481.6176, -921.6868, 26.4090), heading = 266.5938 }
+        { coords = vector3(-58.4249, -146.6452, 56.3418), heading = 76.4960 },
+        { coords = vector3(-1447.3141, 23.2402, 51.5750), heading = 192.1936 },
+        { coords = vector3(-37.2097, -1727.6027, 28.2856), heading = 293.2387 },
+        { coords = vector3(76.4134, -1381.3384, 28.2774), heading = 33.1264 },
+        { coords = vector3(-652.7582, -758.3394, 24.9323), heading = 356.7576 },
     },
-    vehicles = { `adder` }, -- Vehicles that can be spawned for NPC bounties. Use `model_name` for models.
-    weapons = { `WEAPON_PISTOL` }, -- Weapons that can be used by NPC bounties. Use `WEAPON_NAME` for weapons.
+    vehicles = { `adder`, `blista`, `asea`, `emperor`, `fugitive` }, -- Vehicles that can be spawned for NPC bounties. Use `model_name` for models.
+    weapons = { `WEAPON_PISTOL`, `WEAPON_KNIFE` }, -- Weapons that can be used by NPC bounties. Use `WEAPON_NAME` for weapons.
     chaseScenarioChances = { -- Chances for each scenario to happen after a chase. Do not delete any of these entries.
         ["fleeFoot"] = 0.6, -- Chance of the NPC fleeing on foot. 0.4 means 40% chance.
         ["meleeAttack"] = 0.3, -- Chance of the NPC fleeing in a vehicle. 0.6 means 60% chance.
@@ -126,9 +140,18 @@ Config.BountyHunters = {
         -- Downtown LS (MXC Bottom Dollar Bounties MLO)
         {coords = vector3(477.9416, -915.9977, 26.4090), heading = 90.8748},
     },
-    vehicleLocations = {
-        -- Downtown LS (MXC Bottom Dollar Bounties MLO)
-        {coords = vector3(477.9416, -915.9977, 26.4090), heading = 90.8748},
+    loadout = {
+        {name = "WEAPON_STUNGUN", loadoutType = "weapon"},
+    },
+    outfits = {
+        male = {
+            ['bproof_1'] = 63,
+            ['bproof_2'] = 0,
+        },
+        female = {
+            ['bproof_1'] = 63,
+            ['bproof_2'] = 0,
+        }
     },
     permissions = {
         jobs = {
@@ -141,6 +164,8 @@ Config.BailOfficers = {
     maximumBailLength = 7, -- Maximum days the person will be out on bail. If they comply with all 7 days, they will be released from bail.
     maximumBailAmount = 10000, -- Maximum bail amount that can be set.
     bountyRewardMultiplier = 0.85, -- Multiplier for bounty rewards when setting bail. 0.85 means 85% of the bail amount.
+    custodyRewardFactor = 1.5, -- This is how much the reward amount given to bounty hunters is multiplied for turning over a bounty to a bail officer.
+    custodyRewardOfficer = 500, -- This is the amount given to the officer for turning over a bounty.
     permissions = {
         placement = {
             jobs = {
@@ -209,7 +234,7 @@ Config.Bail = {
         {
             label = "Littering Cleanup",
             description = "(%s / %s) Clean up the streets by picking up litter.", -- TWO %s IS REQUIRED. You must use the first %s for the current progress and the second %s for the total progress.
-            pointsRequired = 3, -- Amount of points required to complete the mission. This will be overrided if over the amount of points in the points table.
+            pointsRequired = 5, -- Amount of points required to complete the mission. This will be overrided if over the amount of points in the points table.
             blip = { 
                 label = "Parole Requirement: Litter Cleanup", 
                 coords = vector3(451.9554, -976.3088, 30.6893), 
@@ -219,9 +244,16 @@ Config.Bail = {
                 radius = { color = 5, alpha = 127, size = 5.0} 
             },
             points = {
-                { label = "Pickup Litter", coords = vector3(451.9792, -977.0803, 30.6893), zOffset = 1.0, heading = 85.3429, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
-                { label = "Pickup Litter", coords = vector3(451.9554, -976.3088, 30.6893), zOffset = 1.0, heading = 85.3429, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
-                { label = "Pickup Litter", coords = vector3(452.1414, -975.3770, 30.6893), zOffset = 1.0, heading = 85.3429, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(7.7405, -159.0079, 56.1640), zOffset = 1.0, heading = 247.1249, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(25.2710, -163.0202, 55.7089), zOffset = 1.0, heading = 249.9383, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(16.3565, -162.8304, 55.9348), zOffset = 1.0, heading = 75.0355, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(12.5163, -161.8073, 56.0322), zOffset = 1.0, heading = 247.1249, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(6.7037, -154.8534, 56.2178), zOffset = 1.0, heading = 249.9383, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(-0.2918, -156.1621, 56.3658), zOffset = 1.0, heading = 75.0355, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(-7.0962, -153.0651, 56.5264), zOffset = 1.0, heading = 247.1249, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(-18.0787, -150.7282, 56.7860), zOffset = 1.0, heading = 249.9383, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(-26.2488, -146.7720, 56.9589), zOffset = 1.0, heading = 75.0355, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
+                { label = "Pickup Litter", coords = vector3(-33.0669, -141.5078, 57.1016), zOffset = 1.0, heading = 75.0355, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },
             },
             pointAction = function(pointData)
                 -- Return true if the point action is successful. Return false if the point action is not successful.

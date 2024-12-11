@@ -58,6 +58,23 @@ AddEventHandler('esx:playerLoaded',function(xPlayer, isNew, skin)
     TriggerServerEvent("pickle_bailbounty:initializePlayer")
 end)
 
+function ToggleOutfit(onduty)
+    if onduty then 
+        local outfits = Config.BountyHunters.outfits
+        ESX.TriggerServerCallback('esx_skin:getPlayerSkin', function(skin, jobSkin)
+            local gender = skin.sex
+            local outfit = gender == 1 and outfits.female or outfits.male
+            if not outfit then return end
+            TriggerEvent('skinchanger:loadClothes', skin, outfit)
+        end)
+    else
+        ESX.TriggerServerCallback('esx_skin:getPlayerSkin', function(skin, jobSkin)
+            local gender = skin.sex
+            TriggerEvent('skinchanger:loadSkin', skin)
+        end)
+    end
+end
+
 -- Inventory Fallback
 
 CreateThread(function()
@@ -77,6 +94,6 @@ CreateThread(function()
     end)
     
     RegisterNetEvent("pickle_bailbounty:updateInventory", function(inventory) 
-        RefreshInventory(inventory)
+        -- RefreshInventory(inventory)
     end)
 end)

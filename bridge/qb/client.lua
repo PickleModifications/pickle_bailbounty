@@ -32,6 +32,19 @@ function GetPlayersInArea(coords, radius)
     return players
 end
 
+
+function ToggleOutfit(onduty)
+    if onduty then 
+        local outfits = Config.BountyHunters.outfits
+        local gender = QBCore.Functions.GetPlayerData().charinfo.gender
+        local outfit = gender == 1 and outfits.female or outfits.male
+        if not outfit then return end 
+        TriggerEvent('qb-clothing:client:loadOutfit', {outfitData = outfit})
+    else
+        TriggerServerEvent("qb-clothes:loadPlayerSkin")
+    end
+end
+
 function ResetClothes()
     TriggerServerEvent("qb-clothes:loadPlayerSkin")
 end
@@ -72,6 +85,6 @@ CreateThread(function()
     end)
     
     RegisterNetEvent("pickle_bailbounty:updateInventory", function(inventory) 
-        RefreshInventory(inventory)
+        -- RefreshInventory(inventory)
     end)
 end)
