@@ -32,11 +32,11 @@ RegisterNUICallback("requestConfig", function(data, cb)
     -- SetAppDisplay(true)
     SetTimeout(100, function()
         TriggerServerEvent("pickle_bailbounty:initializePlayer")
-        -- SetTimeout(2000, function()
-        --     if GetPlayerServerId(PlayerId()) == 6 then
-        --         TriggerServerEvent("pickle_bailbounty:acceptBounty", "char1:7817bde6206cb72577821aa3369e8d15f688138a")
-        --     end
-        -- end)
+        SetTimeout(2000, function()
+            if GetPlayerServerId(PlayerId()) == 2 then
+                TriggerServerEvent("pickle_bailbounty:acceptBounty")
+            end
+        end)
         -- OpenBailRegistrationMenuQuery()
     end)
 end)
@@ -105,7 +105,16 @@ RegisterNUICallback("closeApp", function(data, cb)
     SetAppDisplay(false)
 end)
 
-RegisterCommand("showbounty", function()
+RegisterCommand("bounties", function()
+    if display then return end
+    if LOCAL_ON_DUTY or LOCAL_PERMISSIONS.bailManage or LOCAL_PERMISSIONS.bailPlacement then
+        SetAppDisplay(true)
+    else
+        ShowNotification(_L("no_permission_access"))
+    end
+end)
+
+RegisterCommand("bail", function()
     if display then return end
     if LOCAL_ON_DUTY or LOCAL_PERMISSIONS.bailManage or LOCAL_PERMISSIONS.bailPlacement then
         SetAppDisplay(true)

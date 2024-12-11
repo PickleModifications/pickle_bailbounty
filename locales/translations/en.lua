@@ -102,10 +102,12 @@ Language["en"] = {
     bounty_need_out_vehicle = "Your bounty target needs to be outside of a vehicle to do this.",
     no_back_seat = "There is no back seat available in this vehicle.",
     bounty_sentence = "Bounty Sentence:",
+    bounty_sentence_nc = "Bounty Sentence",
     bounty_wanted = "This is a high-risk individual with a bounty that cannot be located, approach with caution.",
     bounty_needs_detained = "This bounty needs to be detained.",
     bounty_not_accepted = "This bounty has not been accepted.",
     bounty_released = "You have taken-in the bounty target, cuff them if you are taking them in.",
     bounty_interact_custody = "Take Bounty into Custody",
     bounty_custody_reward = "You have received %s for taking the bounty into custody.",
+    no_ankle_monitor = "You must have an ankle monitor to place someone on bail.",
 }

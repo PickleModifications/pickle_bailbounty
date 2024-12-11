@@ -1,0 +1,1 @@
+["ankle_monitor"] 					= {["name"] = "ankle_monitor",  	     		        ["label"] = "Ankle Monitor",	 		    ["weight"] = 1, 		["type"] = "item", 		["image"] = "ankle_monitor.png", 				["unique"] = false, 	    ["useable"] = true, 	["shouldClose"] = true,   	["combinable"] = nil,   ["description"] = ""},

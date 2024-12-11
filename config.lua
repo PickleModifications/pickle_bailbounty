@@ -154,8 +154,9 @@ Config.BountyHunters = {
         }
     },
     permissions = {
+        ignorePermissions = false, -- Set to true to allow anyone to become a bounty hunter.
         jobs = {
-            ["mechanic"] = 0, -- Any person with the job bountyhunter can accept bounties at rank 0 and above.
+            ["bountyhunter"] = 0, -- Any person with the job bountyhunter can accept bounties at rank 0 and above.
         }
     }
 }
@@ -236,12 +237,14 @@ Config.Bail = {
             description = "(%s / %s) Clean up the streets by picking up litter.", -- TWO %s IS REQUIRED. You must use the first %s for the current progress and the second %s for the total progress.
             pointsRequired = 5, -- Amount of points required to complete the mission. This will be overrided if over the amount of points in the points table.
             blip = { 
+                enabled = true,
                 label = "Parole Requirement: Litter Cleanup", 
-                coords = vector3(451.9554, -976.3088, 30.6893), 
+                category = 1,
+                coords = vector3(6.7037, -154.8534, 56.2178), 
                 sprite = 318, 
                 color = 5, 
                 scale = 0.8,
-                radius = { color = 5, alpha = 127, size = 5.0} 
+                radius = { color = 5, alpha = 127, size = 20.0} 
             },
             points = {
                 { label = "Pickup Litter", coords = vector3(7.7405, -159.0079, 56.1640), zOffset = 1.0, heading = 247.1249, model = { hash = `prop_rub_litter_05`, modelType = "prop" } },

@@ -40,6 +40,7 @@ function CanAccessGroup(source, data)
 end
 
 function CheckPermission(source, permission)
+    if permission.ignorePermissions then return true end
     local source = tonumber(source)
     local xPlayer = QBCore.Functions.GetPlayer(source).PlayerData
     local name = xPlayer.job.name

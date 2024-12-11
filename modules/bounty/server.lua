@@ -25,7 +25,7 @@ function AddBountyToRegistry(bounty, ignoreSync, insertSQL)
         sentence = bounty.sentence or 0,
     }
     if insertSQL then
-        MySQL.Async.execute("INSERT INTO pickle_bailbounty_bounties (target, targetname, image, issuer, reward, description, datetime) VALUES (@target, @targetname, @image, @issuer, @reward, @description, @datetime)", {
+        MySQL.Async.execute("INSERT INTO pickle_bailbounty_bounties (target, targetname, image, issuer, reward, description, datetime, sentence) VALUES (@target, @targetname, @image, @issuer, @reward, @description, @datetime, @sentence)", {
             ["@target"] = bounty.target,
             ["@targetname"] = bounty.targetname,
             ["@image"] = bounty.image,
@@ -450,7 +450,10 @@ RegisterNetEvent("pickle_bailbounty:toggleDuty", function()
         }
         ShowNotification(source, _L("bountyhunter_on"))
         for i=1, #Config.BountyHunters.loadout do
-            Inventory.AddItem(source, Config.BountyHunters.loadout[i].name, Config.BountyHunters.loadout[i].count or 1)
+            local count = Inventory.GetItemCount(source, Config.BountyHunters.loadout[i].name)
+            if count < Config.BountyHunters.loadout[i].count then
+                Inventory.AddItem(source, Config.BountyHunters.loadout[i].name, Config.BountyHunters.loadout[i].count - count)
+            end
         end
     end
     TriggerClientEvent("pickle_bailbounty:dutyState", source, BountyHunters[source])

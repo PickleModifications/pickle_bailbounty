@@ -59,13 +59,20 @@ end
 
 function PerformScenario(scenario)
     local id = CurrentBounty.id
+    -- SetTimeout(1500, function()
+    --     BountyInteract(id, "detain")
+    -- end)
     if scenario == "fleeFoot" or (scenario == "fleeVehicle" and CurrentBounty.vehicle == nil) then
         while CurrentBounty and CurrentBounty.id == id and CurrentBounty.targetNPC do
             local playerPed = PlayerPedId()
             local playerCoords = GetEntityCoords(playerPed)
             local targetCoords = GetEntityCoords(CurrentBounty.targetNPC)
             local distance = #(playerCoords - targetCoords)
-            if distance < 10.0 then
+            if distance < 50.0 then
+                RemoveBlip(CurrentBounty.targetBlip)
+                CurrentBounty.targetBlip = nil
+                RemoveBlip(CurrentBounty.targetRadius)
+                CurrentBounty.targetRadius = nil
                 TaskSmartFleePed(CurrentBounty.targetNPC, playerPed, 100.0, -1, false, false)
                 ShowNotification(_L("bounty_fleeing", CurrentBounty.name))
                 break
@@ -79,7 +86,11 @@ function PerformScenario(scenario)
             local playerCoords = GetEntityCoords(playerPed)
             local targetCoords = GetEntityCoords(CurrentBounty.targetNPC)
             local distance = #(playerCoords - targetCoords)
-            if distance < 10.0 then
+            if distance < 50.0 then
+                RemoveBlip(CurrentBounty.targetBlip)
+                CurrentBounty.targetBlip = nil
+                RemoveBlip(CurrentBounty.targetRadius)
+                CurrentBounty.targetRadius = nil
                 TaskCombatPed(CurrentBounty.targetNPC, playerPed, 0, 16)
                 break
             end
@@ -95,6 +106,10 @@ function PerformScenario(scenario)
             local targetCoords = GetEntityCoords(CurrentBounty.targetNPC)
             local distance = #(playerCoords - targetCoords)
             if distance < 50.0 then
+                RemoveBlip(CurrentBounty.targetBlip)
+                CurrentBounty.targetBlip = nil
+                RemoveBlip(CurrentBounty.targetRadius)
+                CurrentBounty.targetRadius = nil
                 TaskCombatPed(CurrentBounty.targetNPC, playerPed, 0, 16)
                 break
             end
@@ -388,17 +403,6 @@ RegisterNetEvent("pickle_bailbounty:setBountyState", function(identifier, data)
                         timeout = timeout - 100
                     end
                 end
-                if ped and NetworkHasControlOfEntity(ped) then
-                    ClearPedTasksImmediately(ped)
-                    PlayAnim(ped, "mp_arrest_paired", "crook_p2_back_left", 8.0, -8.0, 5500, 33, 0, false, false, false)
-                    SetEntityCoords(ped, data.coords.x, data.coords.y, data.coords.z + 0.5)
-                    SetEntityHeading(ped, data.heading)
-
-                    SetEnableHandcuffs(ped, true)
-                    SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true) -- unarm player
-                    SetPedCanPlayGestureAnims(ped, false)
-                    FreezeEntityPosition(ped, true)
-                end
             end
             SetEntityHeading(PlayerPedId(), data.heading)
             FreezeEntityPosition(PlayerPedId(), true)
@@ -409,7 +413,26 @@ RegisterNetEvent("pickle_bailbounty:setBountyState", function(identifier, data)
             end)
         end
         if BountyInfo[identifier].netId then
-            local ped = BountyInfo[identifier].netId
+            local ped = NetToPed(BountyInfo[identifier].netId)
+            if not NetworkHasControlOfEntity(ped) then
+                NetworkRequestControlOfEntity(ped)
+                local timeout = 500
+                while timeout > 0 and not NetworkHasControlOfEntity(ped) do
+                    Wait(100)
+                    timeout = timeout - 100
+                end
+            end
+            if ped then
+                ClearPedTasksImmediately(ped)
+                PlayAnim(ped, "mp_arrest_paired", "crook_p2_back_left", 8.0, -8.0, 5500, 33, 0, false, false, false)
+                SetEntityCoords(ped, data.coords.x, data.coords.y, data.coords.z + 0.5)
+                SetEntityHeading(ped, data.heading)
+
+                SetEnableHandcuffs(ped, true)
+                SetCurrentPedWeapon(ped, `WEAPON_UNARMED`, true) -- unarm player
+                SetPedCanPlayGestureAnims(ped, false)
+                FreezeEntityPosition(ped, true)
+            end
             SetTimeout(5000, function()
                 FreezeEntityPosition(ped, true)
                 SetBlockingOfNonTemporaryEvents(ped, true)
@@ -670,7 +693,7 @@ RegisterNetEvent("pickle_bailbounty:setBountyState", function(identifier, data)
         end
         if BountyInfo[identifier].source == serverId then
             local ped = PlayerPedId()
-            ClearPedTasks(ped)
+            ClearPedTasksImmediately(ped)
             TaskLeaveVehicle(ped, NetToVeh(data.currentVehicle), 16)
         end
     end
@@ -752,10 +775,6 @@ RegisterNetEvent("pickle_bailbounty:acceptBounty", function(target)
                 CancelCurrentBounty()
                 return
             end
-            RemoveBlip(CurrentBounty.targetBlip)
-            CurrentBounty.targetBlip = nil
-            RemoveBlip(CurrentBounty.targetRadius)
-            CurrentBounty.targetRadius = nil
             PerformScenario(scenario)                
         end)
     end
@@ -804,7 +823,7 @@ RegisterNetEvent("pickle_bailbounty:dutyState", function(state)
                         brakeTime = brakeTime + 1
                     elseif brakeTime > 0 or brakeTime == -1 then
                         if brakeTime < 20 and brakeTime > 0 then
-                            ExecuteCommand("showbounty")
+                            ExecuteCommand("bounties")
                         elseif brakeTime == -1 then
                             showInteract = true
                             SetTimeout(3000, function()

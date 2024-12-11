@@ -1,9 +1,9 @@
 function GetAllPlayers(source, ignoreSelf)
     local players = {}
     for _, player in ipairs(GetPlayers()) do
-        if not source or not ignoreSelf or player ~= source then
+        if not source or not ignoreSelf or tonumber(player) ~= tonumber(source) then
             table.insert(players, {
-                source = player,
+                source = tonumber(player),
                 identifier = GetIdentifier(player),
                 name = GetPlayerCharacterName(player),
             })
@@ -34,14 +34,14 @@ function GetExtraQueries(source, extraQueries)
 end
 
 function GetNearbyPlayers(source)
-    local players = GetAllPlayers(source, false) -- TODO SET TRUE
+    local players = GetAllPlayers(source, true)
     local nearbyPlayers = {}
     local sourceCoords = GetEntityCoords(GetPlayerPed(source))
     for i=1, #players do 
         local target = players[i].source
         local targetCoords = GetEntityCoords(GetPlayerPed(target))
         local distance = #(sourceCoords - targetCoords)
-        if distance < 5.0 then
+        if distance < 5.0 and tonumber(target) ~= tonumber(source) then
             table.insert(nearbyPlayers, players[i])
         end
     end
@@ -84,9 +84,30 @@ end)
 AddEventHandler("weaponDamageEvent", function(sender, data)
     if not Config.TazerPermissions.enabled then return end
     if data.weaponType == 911657153 or data.weaponType == GetHashKey("WEAPON_STUNGUN") then
-        if not BountyHunters[tonumber(sender)] and not CheckPermission(tonumber(sender), Config.TazerPermissions)  then
-            CancelEvent()
+        if CheckPermission(tonumber(sender), Config.TazerPermissions) then
+            return
         end
+        if not BountyHunters[tonumber(sender)] then
+            return CancelEvent()
+        end
+        local ped = GetPlayerPed(tonumber(sender))
+        local coords = GetEntityCoords(ped)
+        local currentBounty = nil
+        for k,v in pairs(BountyInfo) do
+            local target
+            if v.source then
+                target = GetPlayerPed(v.source)
+            elseif v.netId then
+                target = NetworkGetEntityFromNetworkId(v.netId)
+                local targetCoords = GetEntityCoords(target)
+                local distance = #(coords - targetCoords)
+                print(source, distance)
+                if distance < 10.0 then 
+                    currentBounty = v
+                end
+            end
+        end
+        if not currentBounty then return CancelEvent() end
     end
 end)
 

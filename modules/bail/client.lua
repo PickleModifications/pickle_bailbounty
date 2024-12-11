@@ -48,6 +48,7 @@ function OpenBailRegistrationMenu(players)
         {type = 'input', label = _L("bail_place_image"), placeholder = _L("bail_place_image_placeholder"), required = true},
         {type = 'slider', label = _L("bail_place_penalty"), min = 0, max = Config.BailOfficers.maximumBailAmount, default = math.floor(Config.BailOfficers.maximumBailAmount / 2), required = true},
         {type = 'slider', label = _L("bail_place_length"), min = 1, max = Config.BailOfficers.maximumBailLength, default = 1, required = true},
+        {type = 'input', label = _L("bounty_sentence_nc"), default = "0", required = true},
         {type = 'textarea', label = _L("bail_place_description"), placeholder = _L("bail_place_description_placeholder"), required = true},
     })
     if not input then return end
@@ -56,7 +57,8 @@ function OpenBailRegistrationMenu(players)
         image = input[2],
         penalty = input[3],
         length = input[4],
-        description = input[5],
+        sentence = tonumber(input[5]) or 0,
+        description = input[6],
     })
 end
 
@@ -133,7 +135,7 @@ function StartParoleMission()
             SetTextDropShadow()
             SetTextOutline()
             SetTextEntry("STRING")
-            AddTextComponentString("~y~".. ParoleMissionState.label..":~w~ " .. string.format(ParoleMissionState.description, ParoleMissionState.progress, #ParoleMissionState.points))
+            AddTextComponentString("~y~".. ParoleMissionState.label..":~w~ " .. string.format(ParoleMissionState.description, ParoleMissionState.progress, ParoleMissionState.pointsRequired))
             DrawText(0.5, 0.95)
             Wait(0)
         end
@@ -358,6 +360,10 @@ RegisterNetEvent("pickle_bailbounty:updateBailPlayers", function(players)
     end
 end)
 
+RegisterNetEvent("pickle_bailbounty:openRegisterBail", function()
+    OpenBailRegistrationMenuQuery()
+end)
+
 AddEventHandler("onResourceStop", function(resource)
     if resource == GetCurrentResourceName() then
         for k,v in pairs(AttachedBailObjects) do
@@ -395,10 +401,6 @@ CreateThread(function()
         end
         Wait(1000)
     end
-end)
-
-RegisterCommand("registerbail", function()
-    OpenBailRegistrationMenuQuery()
 end)
 
 if Config.Bail.tracker.removal.enabled then

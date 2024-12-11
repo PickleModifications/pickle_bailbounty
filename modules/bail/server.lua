@@ -26,7 +26,7 @@ function AddBailToRegistry(bail, ignoreSync, insertSQL)
         sentence = bail.sentence or 0,
     }
     if insertSQL then
-        MySQL.Async.execute("INSERT INTO pickle_bailbounty_bail (identifier, name, image, issuer, reward, description, status, startdate, completiondate, nextcompliance, lastcompliance) VALUES (@identifier, @name, @image, @issuer, @reward, @description, @status, @startdate, @completiondate, @nextcompliance, @lastcompliance)", {
+        MySQL.Async.execute("INSERT INTO pickle_bailbounty_bail (identifier, name, image, issuer, reward, description, status, startdate, completiondate, nextcompliance, lastcompliance, sentence) VALUES (@identifier, @name, @image, @issuer, @reward, @description, @status, @startdate, @completiondate, @nextcompliance, @lastcompliance, @sentence)", {
             ["@identifier"] = bail.identifier,
             ["@name"] = bail.name,
             ["@image"] = bail.image,
@@ -113,6 +113,11 @@ RegisterNetEvent("pickle_bailbounty:placeBail", function(data)
     if BailRegistry[identifier] then
         return ShowNotification(source, _L("bail_already_exists"))
     end
+    local count = Inventory.GetItemCount(source, "ankle_monitor")
+    if count < 1 then
+        return ShowNotification(source, _L("no_ankle_monitor"))
+    end
+    Inventory.RemoveItem(source, "ankle_monitor", 1)
     local bail = {
         identifier = identifier,
         name = GetPlayerCharacterName(target),
@@ -125,7 +130,7 @@ RegisterNetEvent("pickle_bailbounty:placeBail", function(data)
         nextcompliance = (os.time() + 86400),
         lastcompliance = os.time(),
         status = "compliant",
-        sentence = data.sentence,
+        sentence = data.sentence or 0,
     }
     AddBailToRegistry(bail, false, true)
     ShowNotification(source, "Bail placed on " .. bail.name .. " for " .. NumberWithCommas(data.penalty))
@@ -208,6 +213,14 @@ RegisterCallback("pickle_bailbounty:getBailInfo", function(source, cb, target)
         lastcompliance = bail.lastcompliance and os.date("%m/%d/%Y %H:%M:%S", bail.lastcompliance) or _L("bail_registry_never"),
         checkIn = DoesBailRequireCheckIn(bail),
     })
+end)
+
+RegisterUsableItem("ankle_monitor", function(source)
+    local permissions = GetPlayerPermissions(source)
+    if not permissions.bailManage then
+        return ShowNotification(source, _L("no_permission_bailmanage"))
+    end
+    TriggerClientEvent("pickle_bailbounty:openRegisterBail", source)
 end)
 
 function GetTimeLeft(timeLeft)
