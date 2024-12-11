@@ -47,3 +47,64 @@ function RemoveTargetZone(index)
     Zones[index] = nil
     exports['qb-target']:RemoveZone(index)
 end
+
+
+function GetOptionNames(options)
+    local optionsNames = {}
+    for i=1, #options do 
+        optionsNames[i] = options[i].label
+    end
+    return optionNames
+end
+
+function AddTargetNetworkId(networkId, options)
+    RemoveTargetNetworkId(networkId, options)
+    exports["qb-target"]:AddTargetEntity(networkId, options)
+end
+
+function RemoveTargetNetworkId(networkId, options)
+    exports["qb-target"]:RemoveTargetEntity(networkId, GetOptionNames(options))
+end
+
+function AddTargetGlobalVehicle(options)
+    RemoveTargetGlobalVehicle(options)
+    exports["qb-target"]:AddGlobalVehicle(options)
+end
+
+function RemoveTargetGlobalVehicle(options)
+    for i=1, #options do 
+        exports["qb-target"]:RemoveGlobalVehicle(options[i].label)
+    end
+end
+
+local TargetPlayers = {}
+
+function AddTargetGlobalPlayer(options)
+    RemoveTargetGlobalPlayer(options)
+    for i=1, #options do
+        if options[i].interactCheck then
+            options[i].canInteract = function(entity)
+                for _, player in ipairs(GetActivePlayers()) do
+                    if entity == GetPlayerPed(player) then
+                        return options[i].interactCheck(GetPlayerServerId(player))
+                    end
+                end
+                return false
+            end
+        end
+        if options[i].onSelected then
+            options[i].action = function(entity)
+                for _, player in ipairs(GetActivePlayers()) do
+                    if entity == GetPlayerPed(player) then
+                        return options[i].onSelected(GetPlayerServerId(player))
+                    end
+                end
+            end
+        end
+    end
+    exports["qb-target"]:AddGlobalPlayer(options)
+end
+
+function RemoveTargetGlobalPlayer(options)
+    exports["qb-target"]:RemoveGlobalPlayer(GetOptionNames(options))
+end

@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   base: '/nui',
   build: {
-    outDir: '../../nui',
+    outDir: '../nui',
     emptyOutDir: true, // also necessary
   },
   plugins: [react()],

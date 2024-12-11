@@ -1,19 +1,20 @@
 fx_version "cerulean"
 game "gta5"
 author "Pickle Mods"
-version "v1.1.1"
+description "The Best Bail & Bounty System for FiveM"
+version "v1.0.0"
 
-ui_page "web/dist/index.html"
+ui_page "nui/index.html"
 
 this_is_a_map 'yes'
 
 data_file 'DLC_ITYP_REQUEST' 'stream/*.ytyp'
 
 files {
-	"web/dist/index.html",
-	"web/dist/images/*.*",
-	"web/dist/assets/**/*.*",
-	"web/dist/debug.js",
+	"nui/index.html",
+	"nui/images/*.*",
+	"nui/assets/**/*.*",
+	"nui/debug.js",
 }
 
 shared_scripts {

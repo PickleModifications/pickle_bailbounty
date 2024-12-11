@@ -154,7 +154,7 @@ Config.BountyHunters = {
         }
     },
     permissions = {
-        ignorePermissions = false, -- Set to true to allow anyone to become a bounty hunter.
+        ignorePermissions = true, -- Set to true to allow anyone to become a bounty hunter.
         jobs = {
             ["bountyhunter"] = 0, -- Any person with the job bountyhunter can accept bounties at rank 0 and above.
         }
@@ -192,13 +192,11 @@ Config.Bail = {
         },
         onTrackerRemoval = { -- This will trigger the below callback if the player removes the tracker.
             client = function(data)
-                print(json.encode(data))
                 -- Client-side function to run when the tracker is removed.
                 -- Use this for alerts, notifications, etc.
                 -- data: { coords = vector3(x, y, z), name = "Character Name", source = playerId, identifier = "char1:blahblahblah" }
             end,
             server = function(data)
-                print(json.encode(data))
                 -- Server-side function to run when the tracker is removed.
                 -- Use this for alerts, notifications, etc.
                 -- data: { coords = vector3(x, y, z), name = "Character Name", source = playerId, identifier = "char1:blahblahblah" }
