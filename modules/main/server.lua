@@ -112,8 +112,10 @@ AddEventHandler("weaponDamageEvent", function(sender, data)
 end)
 
 AddEventHandler("onResourceStart", function(name)
-    if name == GetCurrentResourceName() then
-        TriggerClientEvent("pickle_bailbounty:onRestart", -1)
+    if name == GetCurrentResourceName() then 
+        SetTimeout(1000, function()
+            TriggerClientEvent("pickle_bailbounty:onRestart", -1)
+        end)
     end
 end)
 

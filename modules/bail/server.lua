@@ -118,12 +118,17 @@ RegisterNetEvent("pickle_bailbounty:placeBail", function(data)
         return ShowNotification(source, _L("no_ankle_monitor"))
     end
     Inventory.RemoveItem(source, "ankle_monitor", 1)
+    local money = GetMoney(target)
+    if money < data.penalty then
+        ShowNotification(source, _L("bail_not_enough_money"))
+        return 
+    end
     local bail = {
         identifier = identifier,
         name = GetPlayerCharacterName(target),
         image = data.image,
         issuer = GetIdentifier(source),
-        reward = data.penalty * Config.BailOfficers.bountyRewardMultiplier,
+        reward = data.penalty,
         description = data.description,
         startdate = os.time(),
         completiondate = os.time() + (data.length * 86400),
@@ -238,7 +243,7 @@ CreateThread(function()
                 local currentTime = os.time()
                 local nextcompliance = bail.nextcompliance
                 local timeLeft = nextcompliance - currentTime
-                if currentTime > nextcompliance then
+                if currentTime > nextcompliance and nextcompliance < bail.completiondate then
                     RemoveBailFromRegistry(k)
                     AddBountyToRegistry({
                         target = bail.identifier,
@@ -252,6 +257,11 @@ CreateThread(function()
                         risk = 3,
                         sentence = bail.sentence,
                     }, false, true)
+                elseif currentTime > bail.completiondate then
+                    local reward = bail.reward
+                    AddMoney(data.source, reward)
+                    ShowNotification(data.source, _L("bail_registry_reward", NumberWithCommas(reward)))
+                    RemoveBailFromRegistry(k)
                 else
                     local notifyTime = Config.Bail.notifyTime * 3600
                     local bailWarning = BailWarnings[k] or 0

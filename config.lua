@@ -164,7 +164,6 @@ Config.BountyHunters = {
 Config.BailOfficers = {
     maximumBailLength = 7, -- Maximum days the person will be out on bail. If they comply with all 7 days, they will be released from bail.
     maximumBailAmount = 10000, -- Maximum bail amount that can be set.
-    bountyRewardMultiplier = 0.85, -- Multiplier for bounty rewards when setting bail. 0.85 means 85% of the bail amount.
     custodyRewardFactor = 1.5, -- This is how much the reward amount given to bounty hunters is multiplied for turning over a bounty to a bail officer.
     custodyRewardOfficer = 500, -- This is the amount given to the officer for turning over a bounty.
     permissions = {

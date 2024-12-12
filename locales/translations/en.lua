@@ -110,4 +110,6 @@ Language["en"] = {
     bounty_interact_custody = "Take Bounty into Custody",
     bounty_custody_reward = "You have received %s for taking the bounty into custody.",
     no_ankle_monitor = "You must have an ankle monitor to place someone on bail.",
+    bail_not_enough_money = "This person doesn't have enough money in cash to pay for bail.",
+    bail_registry_reward = "For completing your bail sentence, you have received back %s.",
 }

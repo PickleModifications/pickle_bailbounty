@@ -66,7 +66,11 @@ function UpdatePermissions(permissions)
     LOCAL_PERMISSIONS = permissions
     SendNUIMessage({
         type = "updatePermissions",
-        permissions = permissions
+        permissions = {
+            bountyHunter = permissions.bountyHunter or false,
+            bailManage = permissions.bailManage or false,
+            bailPlacement = permissions.bailPlacement or false,
+        }
     })
     SendNUIMessage({
         type = "setSections",
