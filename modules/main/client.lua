@@ -17,6 +17,10 @@ function SetAppDisplay(bool)
     })
 end
 
+RegisterNetEvent("pickle_bailbounty:onRestart", function()
+    TriggerServerEvent("pickle_bailbounty:initializePlayer")
+end)
+
 RegisterNUICallback("requestConfig", function(data, cb)
     cb({
         type = "setConfig",
@@ -29,16 +33,6 @@ RegisterNUICallback("requestConfig", function(data, cb)
         bailOfficers = Config.BailOfficers,
         defaultPlayerImage = "https://www.shutterstock.com/image-vector/silhouette-people-unknown-male-person-260nw-1372192277.jpg",
     })
-    -- SetAppDisplay(true)
-    SetTimeout(100, function()
-        TriggerServerEvent("pickle_bailbounty:initializePlayer")
-        SetTimeout(2000, function()
-            if GetPlayerServerId(PlayerId()) == 2 then
-                TriggerServerEvent("pickle_bailbounty:acceptBounty")
-            end
-        end)
-        -- OpenBailRegistrationMenuQuery()
-    end)
 end)
 
 function GetAppSections()

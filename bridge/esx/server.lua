@@ -105,12 +105,14 @@ CreateThread(function()
         local data = xPlayer.getInventory()
         for i=1, #data do 
             local item = data[i]
-            items[#items + 1] = {
-                name = item.name,
-                label = item.label,
-                count = item.count,
-                weight = item.weight
-            }
+            if item then
+                items[#items + 1] = {
+                    name = item.name,
+                    label = item.label,
+                    count = item.count,
+                    weight = item.weight
+                }
+            end
         end
         return items
     end

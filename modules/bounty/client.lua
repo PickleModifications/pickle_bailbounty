@@ -964,8 +964,6 @@ CreateThread(function()
 end)
 
 CreateThread(function()
-    Wait(1000)
-    TriggerServerEvent("pickle_bailbounty:toggleDuty")
     if Config.UseTarget then
         local onSelect = function(interactType, source)
             for k,v in pairs(BountyInfo) do

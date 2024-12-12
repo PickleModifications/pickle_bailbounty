@@ -111,6 +111,12 @@ AddEventHandler("weaponDamageEvent", function(sender, data)
     end
 end)
 
+AddEventHandler("onResourceStart", function(name)
+    if name == GetCurrentResourceName() then
+        TriggerClientEvent("pickle_bailbounty:onRestart", -1)
+    end
+end)
+
 MySQL.ready(function()
     MySQL.Sync.execute([[CREATE TABLE IF NOT EXISTS pickle_bailbounty_bounties (
         target VARCHAR(255) PRIMARY KEY NOT NULL,
