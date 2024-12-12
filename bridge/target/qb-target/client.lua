@@ -58,17 +58,21 @@ function GetOptionNames(options)
 end
 
 function AddTargetNetworkId(networkId, options)
+    if not NetworkDoesNetworkIdExist(networkId) then return end
+    local entity = NetworkGetEntityFromNetworkId(networkId)
     RemoveTargetNetworkId(networkId, options)
-    exports["qb-target"]:AddTargetEntity(networkId, options)
+    exports["qb-target"]:AddTargetEntity(entity, {options = options, distance = 2.5})
 end
 
 function RemoveTargetNetworkId(networkId, options)
-    exports["qb-target"]:RemoveTargetEntity(networkId, GetOptionNames(options))
+    if not NetworkDoesNetworkIdExist(networkId) then return end
+    local entity = NetworkGetEntityFromNetworkId(networkId)
+    exports["qb-target"]:RemoveTargetEntity(entity, GetOptionNames(options))
 end
 
 function AddTargetGlobalVehicle(options)
     RemoveTargetGlobalVehicle(options)
-    exports["qb-target"]:AddGlobalVehicle(options)
+    exports["qb-target"]:AddGlobalVehicle({options = options, distance = 2.5})
 end
 
 function RemoveTargetGlobalVehicle(options)
@@ -102,7 +106,7 @@ function AddTargetGlobalPlayer(options)
             end
         end
     end
-    exports["qb-target"]:AddGlobalPlayer(options)
+    exports["qb-target"]:AddGlobalPlayer({options = options, distance = 2.5})
 end
 
 function RemoveTargetGlobalPlayer(options)

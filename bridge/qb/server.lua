@@ -15,14 +15,14 @@ function ShowNotification(target, text)
 end
 
 function GetIdentifier(source)
-    local xPlayer = QBCore.Functions.GetPlayer(source).PlayerData
+    local xPlayer = QBCore.Functions.GetPlayer(source)?.PlayerData
     if not xPlayer or not xPlayer.identifier then return end
     return xPlayer.citizenid 
 end
 
 function GetSourceFromIdentifier(identifier)
     local xPlayer = QBCore.Functions.GetPlayerByCitizenId(identifier)
-    return xPlayer and xPlayer.PlayerData.source or nil
+    return xPlayer and xPlayer?.PlayerData.source or nil
 end
 
 function GetPlayerCharacterName(source)
@@ -42,7 +42,8 @@ end
 function CheckPermission(source, permission)
     if permission.ignorePermissions then return true end
     local source = tonumber(source)
-    local xPlayer = QBCore.Functions.GetPlayer(source).PlayerData
+    local xPlayer = QBCore.Functions.GetPlayer(source)?.PlayerData
+    if not xPlayer then return end
     local name = xPlayer.job.name
     local rank = xPlayer.job.grade.level
     if permission.jobs[name] and permission.jobs[name] <= rank then 
