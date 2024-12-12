@@ -110,7 +110,7 @@ function GenerateNPCBounty(ignoreSync)
         npc = {
             model = model,
         },
-        image = "https://cfx-nui-pickle_bailbounty/web/dist/images/"..model..".png",
+        image = "https://cfx-nui-pickle_bailbounty/nui/images/"..model..".png",
         issuer = "system",
         reward = math.random(Config.NPCBounties.rewardRange[1], Config.NPCBounties.rewardRange[2]) * riskCfg.rewardMultiplier,
         description = _L("npc_description", firstname .. " " .. lastname, crime, _L("available_bounties_risk_" .. risk)),
@@ -451,8 +451,9 @@ RegisterNetEvent("pickle_bailbounty:toggleDuty", function()
         ShowNotification(source, _L("bountyhunter_on"))
         for i=1, #Config.BountyHunters.loadout do
             local count = Inventory.GetItemCount(source, Config.BountyHunters.loadout[i].name)
-            if count < Config.BountyHunters.loadout[i].count then
-                Inventory.AddItem(source, Config.BountyHunters.loadout[i].name, Config.BountyHunters.loadout[i].count - count)
+            local giveCount = Config.BountyHunters.loadout[i].count or 1
+            if count < giveCount then
+                Inventory.AddItem(source, Config.BountyHunters.loadout[i].name, giveCount - count)
             end
         end
     end

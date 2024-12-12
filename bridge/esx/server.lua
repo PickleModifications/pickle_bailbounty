@@ -41,6 +41,7 @@ function CanAccessGroup(source, data)
 end 
 
 function CheckPermission(source, permission)
+    if permission.ignorePermissions then return true end
     local xPlayer = ESX.GetPlayerFromId(source)
     if not xPlayer then return end
     local name = xPlayer.job.name
