@@ -16,7 +16,7 @@ function AddBountyToRegistry(bounty, ignoreSync, insertSQL)
         npc = bounty.npc or nil,
         target = bounty.target,
         targetname = bounty.targetname,
-        image = bounty.image,
+        image = bounty.image or "NO_IMAGE",
         issuer = bounty.issuer,
         reward = bounty.reward,
         description = bounty.description,
@@ -28,7 +28,7 @@ function AddBountyToRegistry(bounty, ignoreSync, insertSQL)
         MySQL.Async.execute("INSERT INTO pickle_bailbounty_bounties (target, targetname, image, issuer, reward, description, datetime, sentence) VALUES (@target, @targetname, @image, @issuer, @reward, @description, @datetime, @sentence)", {
             ["@target"] = bounty.target,
             ["@targetname"] = bounty.targetname,
-            ["@image"] = bounty.image,
+            ["@image"] = bounty.image or "NO_IMAGE",
             ["@issuer"] = bounty.issuer,
             ["@reward"] = bounty.reward,
             ["@description"] = bounty.description,
@@ -327,7 +327,7 @@ RegisterNetEvent("pickle_bailbounty:vehicleInteract", function(netId)
         BountyInfo[closestBounty.id].currentVehicle = netId
 
     else
-        print("FAILED TO PUT IN / OUT VEHICLE")
+        dprint("FAILED TO PUT IN / OUT VEHICLE")
     end
 end)
 

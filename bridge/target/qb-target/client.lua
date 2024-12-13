@@ -61,6 +61,15 @@ function AddTargetNetworkId(networkId, options)
     if not NetworkDoesNetworkIdExist(networkId) then return end
     local entity = NetworkGetEntityFromNetworkId(networkId)
     RemoveTargetNetworkId(networkId, options)
+    for i=1, #options do
+        if options[i].onSelect then
+            local cb = options[i].onSelect
+            options[i].action = function(entity)
+                cb({entity = entity})
+            end
+            options[i].onSelect = nil
+        end
+    end
     exports["qb-target"]:AddTargetEntity(entity, {options = options, distance = 2.5})
 end
 
@@ -72,6 +81,15 @@ end
 
 function AddTargetGlobalVehicle(options)
     RemoveTargetGlobalVehicle(options)
+    for i=1, #options do
+        if options[i].onSelect then
+            local cb = options[i].onSelect
+            options[i].action = function(entity)
+                cb({entity = entity})
+            end
+            options[i].onSelect = nil
+        end
+    end
     exports["qb-target"]:AddGlobalVehicle({options = options, distance = 2.5})
 end
 

@@ -101,7 +101,6 @@ AddEventHandler("weaponDamageEvent", function(sender, data)
                 target = NetworkGetEntityFromNetworkId(v.netId)
                 local targetCoords = GetEntityCoords(target)
                 local distance = #(coords - targetCoords)
-                print(source, distance)
                 if distance < 10.0 then 
                     currentBounty = v
                 end

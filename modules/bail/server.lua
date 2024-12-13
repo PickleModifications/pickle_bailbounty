@@ -14,7 +14,7 @@ function AddBailToRegistry(bail, ignoreSync, insertSQL)
         source = GetSourceFromIdentifier(bail.identifier),
         identifier = bail.identifier,
         name = bail.name,
-        image = bail.image,
+        image = bail.image or "NO_IMAGE",
         issuer = bail.issuer,
         reward = bail.reward,
         description = bail.description,
@@ -29,7 +29,7 @@ function AddBailToRegistry(bail, ignoreSync, insertSQL)
         MySQL.Async.execute("INSERT INTO pickle_bailbounty_bail (identifier, name, image, issuer, reward, description, status, startdate, completiondate, nextcompliance, lastcompliance, sentence) VALUES (@identifier, @name, @image, @issuer, @reward, @description, @status, @startdate, @completiondate, @nextcompliance, @lastcompliance, @sentence)", {
             ["@identifier"] = bail.identifier,
             ["@name"] = bail.name,
-            ["@image"] = bail.image,
+            ["@image"] = bail.image or "NO_IMAGE",
             ["@issuer"] = bail.issuer,
             ["@reward"] = bail.reward,
             ["@description"] = bail.description,

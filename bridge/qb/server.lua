@@ -15,8 +15,8 @@ function ShowNotification(target, text)
 end
 
 function GetIdentifier(source)
-    local xPlayer = QBCore.Functions.GetPlayer(source)?.PlayerData
-    if not xPlayer or not xPlayer.identifier then return end
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))?.PlayerData
+    if not xPlayer or not xPlayer.citizenid then return end
     return xPlayer.citizenid 
 end
 
@@ -26,13 +26,14 @@ function GetSourceFromIdentifier(identifier)
 end
 
 function GetPlayerCharacterName(source)
-    local xPlayer = QBCore.Functions.GetPlayer(source)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
+    if not xPlayer or not xPlayer.PlayerData then return "Unknown Name" end
     return xPlayer.PlayerData.charinfo.firstname .. " " .. xPlayer.PlayerData.charinfo.lastname
 end
 
 function CanAccessGroup(source, data)
     if not data then return true end
-    local pdata = QBCore.Functions.GetPlayer(source).PlayerData
+    local pdata = QBCore.Functions.GetPlayer(tonumber(source)).PlayerData
     for k,v in pairs(data) do 
         if (pdata.job.name == k and pdata.job.grade.level >= v) then return true end
     end
@@ -42,7 +43,7 @@ end
 function CheckPermission(source, permission)
     if permission.ignorePermissions then return true end
     local source = tonumber(source)
-    local xPlayer = QBCore.Functions.GetPlayer(source)?.PlayerData
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))?.PlayerData
     if not xPlayer then return end
     local name = xPlayer.job.name
     local rank = xPlayer.job.grade.level
@@ -57,17 +58,17 @@ function CheckPermission(source, permission)
 end
 
 function AddMoney(source, count)
-    local xPlayer = QBCore.Functions.GetPlayer(source)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
     xPlayer.Functions.AddMoney('cash',count)
 end
 
 function RemoveMoney(source, count)
-    local xPlayer = QBCore.Functions.GetPlayer(source)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
     xPlayer.Functions.RemoveMoney('cash',count)
 end
 
 function GetMoney(source)
-    local xPlayer = QBCore.Functions.GetPlayer(source)
+    local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
     return xPlayer.PlayerData.money.cash
 end
 
@@ -89,14 +90,14 @@ CreateThread(function()
     Inventory.Ready = false
 
     Inventory.CanCarryItem = function(source, name, count)
-        local xPlayer = QBCore.Functions.GetPlayer(source)
+        local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
         local weight = QBCore.Player.GetTotalWeight(xPlayer.PlayerData.items)
         local item = QBCore.Shared.Items[name:lower()]
         return ((weight + (item.weight * count)) <= QBCore.Config.Player.MaxWeight)
     end
 
     Inventory.GetInventory = function(source)
-        local xPlayer = QBCore.Functions.GetPlayer(source)
+        local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
         local items = {}
         local data = xPlayer.PlayerData.items
         for slot, item in pairs(data) do 
@@ -117,13 +118,13 @@ CreateThread(function()
     end
 
     Inventory.AddItem = function(source, name, count, metadata) -- Metadata is not required.
-        local xPlayer = QBCore.Functions.GetPlayer(source)
+        local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
         xPlayer.Functions.AddItem(name, count, nil, metadata)
         Inventory.UpdateInventory(source)
     end
 
     Inventory.RemoveItem = function(source, name, count)
-        local xPlayer = QBCore.Functions.GetPlayer(source)
+        local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
         xPlayer.Functions.RemoveItem(name, count)
         Inventory.UpdateInventory(source)
     end
@@ -137,7 +138,7 @@ CreateThread(function()
     end
 
     Inventory.GetItemCount = function(source, name)
-        local xPlayer = QBCore.Functions.GetPlayer(source)
+        local xPlayer = QBCore.Functions.GetPlayer(tonumber(source))
         local item = xPlayer.Functions.GetItemByName(name)
         return item and item.amount or 0
     end
