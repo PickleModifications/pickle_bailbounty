@@ -47,6 +47,10 @@ function AddBailToRegistry(bail, ignoreSync, insertSQL)
     TriggerClientEvent("pickle_bailbounty:addbail", -1, bail.identifier, BailRegistry[bail.identifier])
 end
 
+exports("AddBailToRegistry", function(bail)
+    AddBailToRegistry(bail, false, true)
+end)
+
 function RemoveBailFromRegistry(identifier, ignoreSync)
     if not BailRegistry[identifier] then
         dprint("Bail does not exist for identifier: " .. identifier)
@@ -62,6 +66,10 @@ function RemoveBailFromRegistry(identifier, ignoreSync)
     TriggerClientEvent("pickle_bailbounty:removebail", -1, identifier, GetSourceFromIdentifier(identifier))
 end
 
+exports("RemoveBailFromRegistry", function(identifier)
+    RemoveBailFromRegistry(identifier, false)
+end)
+
 function GetBailStatus(index, params)
     local bail = BailRegistry[index]
     local extraData = {}
@@ -76,10 +84,14 @@ function GetBailStatus(index, params)
     return bail, extraData
 end
 
+exports("GetBailStatus", GetBailStatus)
+
 function DoesBailRequireCheckIn(bail)
     if not bail.nextcompliance then return false end
     return (bail.nextcompliance - os.time()) < 86400
 end
+
+exports("DoesBailRequireCheckIn", DoesBailRequireCheckIn)
 
 function UpdateBail(identifier, bail, noSQL)
     BailRegistry[identifier] = bail

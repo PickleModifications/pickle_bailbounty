@@ -42,6 +42,10 @@ function AddBountyToRegistry(bounty, ignoreSync, insertSQL)
     TriggerClientEvent("pickle_bailbounty:addBounty", -1, bounty.target, BountyRegistry[bounty.target])
 end
 
+exports("AddBountyToRegistry", function(bounty)
+    AddBountyToRegistry(bounty, false, true)
+end)
+
 function RemoveBountyFromRegistry(target, ignoreSync, deleteSQL, source)
     if not BountyRegistry[target] then
         dprint("Bounty does not exist for target: " .. target)
@@ -65,6 +69,10 @@ function RemoveBountyFromRegistry(target, ignoreSync, deleteSQL, source)
     if ignoreSync then return end
     TriggerClientEvent("pickle_bailbounty:removeBounty", -1, target)
 end
+
+exports("RemoveBountyFromRegistry", function(target)
+    RemoveBountyFromRegistry(target, false, true)
+end)
 
 function UpdateBounty(target, bounty)
     if not BountyRegistry[target] then
@@ -121,6 +129,10 @@ function GenerateNPCBounty(ignoreSync)
     TriggerClientEvent("pickle_bailbounty:addBounty", -1, target, BountyRegistry[target])
 end
 
+exports("GenerateNPCBounty", function()
+    GenerateNPCBounty(false)
+end)
+
 function GetPlayerCurrentBounty(source)
     for k,v in pairs(BountyRegistry) do
         if v.bountyHunter == source then
@@ -128,6 +140,8 @@ function GetPlayerCurrentBounty(source)
         end
     end
 end
+
+exports("GetPlayerCurrentBounty", GetPlayerCurrentBounty)
 
 function CancelBounty(target, remove)
     local bounty = BountyRegistry[target]
@@ -145,6 +159,8 @@ function CancelBounty(target, remove)
         type = "removeBountyTarget"
     })
 end
+
+exports("CancelBounty", CancelBounty)
 
 function CompleteBounty(identifier, source, jailPlayer, policeSource)
     local bounty = BountyRegistry[identifier]
@@ -174,6 +190,12 @@ function CompleteBounty(identifier, source, jailPlayer, policeSource)
     end
     RemoveBountyFromRegistry(identifier, false, true, source)
 end
+
+function IsPlayerBountyHunter(source)
+    return BountyHunters[source] ~= nil
+end
+
+exports("IsPlayerBountyHunter", IsPlayerBountyHunter)
 
 RegisterNetEvent("pickle_bailbounty:setCurrentBountyNPC", function(netId)
     local source = source
